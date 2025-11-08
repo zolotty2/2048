@@ -55,7 +55,7 @@ namespace _2048
             this.SizeChanged += MainForm_SizeChanged;
 
             // Устанавливаем начальный размер окна
-            this.ClientSize = new Size(500, 600);
+            this.ClientSize = new Size(550, 730);
             this.MinimumSize = new Size(400, 500);
             this.Text = "2048 Game";
 
@@ -128,7 +128,7 @@ namespace _2048
                 // Выход из полноэкранного режима
                 this.FormBorderStyle = FormBorderStyle.Sizable;
                 this.WindowState = previousWindowState;
-                this.Size = new Size(500, 600);
+                this.Size = new Size(550, 730);
                 isFullscreen = false;
             }
             else
@@ -542,7 +542,7 @@ namespace _2048
                     messageRect.Height
                 );
 
-                g.DrawString("Game Over!\n\nScore: " + game.Score + "\n\nPress R to Restart",
+                g.DrawString("\nGame Over!\n\nScore: " + game.Score + "\n\n\nPress R to Restart",
                     font, brush, textRect, format);
             }
         }
