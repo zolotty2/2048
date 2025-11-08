@@ -1,4 +1,3 @@
-
 using System;
 using System.Drawing;
 using System.Windows.Forms;
@@ -10,23 +9,41 @@ namespace _2048
     public partial class MainForm : Form
     {
         private Game2048 game;
-        private const int TileSize = 80;
-        private const int GridPadding = 10;
+        private int tileSize = 80;
+        private int gridPadding = 10;
         private const int CornerRadius = 12;
         private Label scoreLabel;
         private Label instructionsLabel;
         private System.Windows.Forms.Timer animationTimer;
-        private float animationSpeed = 0.08f; // Более плавная скорость
+        private float animationSpeed = 0.08f;
 
-        // Флаг для отслеживания показа экрана окончания
+        // Настройки темы
+        private bool darkTheme = false;
+        private ColorTheme currentTheme;
+
+        // Флаги для UI
         private bool showGameOver = false;
         private bool showWin = false;
+        private bool isFullscreen = false;
+        private FormWindowState previousWindowState;
 
         public MainForm()
         {
             InitializeComponent();
+            InitializeComponents();
+        }
+
+        private void InitializeComponents()
+        {
+            InitializeTheme();
             InitializeGame();
             InitializeAnimationTimer();
+            InitializeControls();
+        }
+
+        private void InitializeTheme()
+        {
+            currentTheme = darkTheme ? ColorTheme.Dark : ColorTheme.Light;
         }
 
         private void InitializeGame()
@@ -34,42 +51,127 @@ namespace _2048
             game = new Game2048();
             this.KeyPreview = true;
             this.KeyDown += MainForm_KeyDown;
+            this.Resize += MainForm_Resize;
+            this.SizeChanged += MainForm_SizeChanged;
+
+            // Устанавливаем начальный размер окна
+            this.ClientSize = new Size(500, 600);
+            this.MinimumSize = new Size(400, 500);
+            this.Text = "2048 Game";
 
             this.Focus();
+            this.DoubleBuffered = true;
+        }
 
+        private void InitializeControls()
+        {
+            // Score label
             scoreLabel = new Label();
-            scoreLabel.Location = new Point(GridPadding, GridPadding);
+            scoreLabel.Location = new Point(gridPadding, gridPadding);
             scoreLabel.Size = new Size(200, 30);
             scoreLabel.Font = new Font("Arial", 14, FontStyle.Bold);
             scoreLabel.Text = "Score: 0";
+            scoreLabel.TabStop = false;
             this.Controls.Add(scoreLabel);
 
+            // Instructions label
             instructionsLabel = new Label();
-            instructionsLabel.Location = new Point(GridPadding, 400);
-            instructionsLabel.Size = new Size(350, 60);
+            instructionsLabel.Location = new Point(gridPadding, 400);
+            instructionsLabel.Size = new Size(400, 80);
             instructionsLabel.Font = new Font("Arial", 10);
-            instructionsLabel.Text = "Управление:\r\nСтрелки - движение плиток\r\nR - начать заново";
+            instructionsLabel.Text = "Управление:\r\nСтрелки - движение плиток\r\nR - начать заново\r\nF - полноэкранный режим\r\nT - сменить тему\r\nESC - выход из полноэкранного режима";
+            instructionsLabel.TabStop = false;
             this.Controls.Add(instructionsLabel);
 
-            this.ClientSize = new Size(4 * TileSize + 5 * GridPadding, 4 * TileSize + 5 * GridPadding + 150);
-            this.Text = "2048 Game";
-            this.DoubleBuffered = true;
+            UpdateTheme();
+            CalculateSizes();
+        }
+
+        private void CalculateSizes()
+        {
+            if (this.ClientSize.Width == 0 || this.ClientSize.Height == 0)
+                return;
+
+            int availableWidth = this.ClientSize.Width - (5 * gridPadding);
+            int availableHeight = this.ClientSize.Height - (5 * gridPadding) - 100;
+
+            tileSize = Math.Min(availableWidth / 4, availableHeight / 4);
+            tileSize = Math.Max(40, tileSize);
+            tileSize = Math.Min(120, tileSize);
+
+            // Обновляем позиции элементов управления
+            if (instructionsLabel != null)
+            {
+                instructionsLabel.Location = new Point(gridPadding, 4 * tileSize + 5 * gridPadding + 60);
+            }
         }
 
         private void InitializeAnimationTimer()
         {
             animationTimer = new System.Windows.Forms.Timer();
-            animationTimer.Interval = 16; // 60 FPS
+            animationTimer.Interval = 16;
             animationTimer.Tick += AnimationTimer_Tick;
+        }
+
+        private void ToggleTheme()
+        {
+            darkTheme = !darkTheme;
+            currentTheme = darkTheme ? ColorTheme.Dark : ColorTheme.Light;
+            UpdateTheme();
+            this.Invalidate();
+        }
+
+        private void ToggleFullscreen()
+        {
+            if (isFullscreen)
+            {
+                // Выход из полноэкранного режима
+                this.FormBorderStyle = FormBorderStyle.Sizable;
+                this.WindowState = previousWindowState;
+                this.Size = new Size(500, 600);
+                isFullscreen = false;
+            }
+            else
+            {
+                // Вход в полноэкранный режим
+                previousWindowState = this.WindowState;
+                this.FormBorderStyle = FormBorderStyle.None;
+                this.WindowState = FormWindowState.Maximized;
+                isFullscreen = true;
+            }
+            CalculateSizes();
+            this.Invalidate();
+        }
+
+        private void UpdateTheme()
+        {
+            if (currentTheme == null) return;
+
+            var theme = currentTheme;
+
+            this.BackColor = theme.BackgroundColor;
+
+            if (scoreLabel != null)
+            {
+                scoreLabel.ForeColor = theme.TextColor;
+                scoreLabel.BackColor = theme.BackgroundColor;
+            }
+
+            if (instructionsLabel != null)
+            {
+                instructionsLabel.ForeColor = theme.TextColor;
+                instructionsLabel.BackColor = theme.BackgroundColor;
+            }
         }
 
         private void AnimationTimer_Tick(object sender, EventArgs e)
         {
+            if (game == null || game.Animations == null) return;
+
             bool animationsFinished = true;
 
             foreach (var animation in game.Animations)
             {
-                // Используем квадратичную функцию для более плавного движения
                 animation.Progress += animationSpeed;
 
                 if (animation.Progress < 1.0f)
@@ -88,7 +190,6 @@ namespace _2048
             {
                 animationTimer.Stop();
 
-                // После завершения всех анимаций проверяем статус игры
                 if (game.GameOver)
                 {
                     showGameOver = true;
@@ -98,21 +199,37 @@ namespace _2048
                     showWin = true;
                 }
 
-                this.Invalidate(); // Принудительная перерисовка для показа экрана окончания
+                this.Invalidate();
             }
+        }
+
+        private void MainForm_Resize(object sender, EventArgs e)
+        {
+            CalculateSizes();
+            this.Invalidate();
+        }
+
+        private void MainForm_SizeChanged(object sender, EventArgs e)
+        {
+            CalculateSizes();
+            this.Invalidate();
         }
 
         private void MainForm_Load(object sender, EventArgs e)
         {
+            CalculateSizes();
+            this.Focus();
         }
 
         protected override void OnPaint(PaintEventArgs e)
         {
             base.OnPaint(e);
+
+            if (game == null) return;
+
             UpdateScore();
             DrawGrid(e.Graphics);
 
-            // Рисуем экран окончания поверх всего, если игра завершена
             if (showGameOver)
             {
                 DrawGameOver(e.Graphics);
@@ -125,29 +242,30 @@ namespace _2048
 
         private void DrawGrid(Graphics g)
         {
+            if (game == null) return;
+
             var grid = game.GetGrid();
-            var font = new Font("Arial", 16, FontStyle.Bold);
+            var font = new Font("Arial", GetFontSize(), FontStyle.Bold);
 
             DrawGridBackground(g);
 
-            // Собираем все позиции, которые участвуют в анимациях
             var animatedPositions = new HashSet<(int, int)>();
-            foreach (var animation in game.Animations)
+            if (game.Animations != null)
             {
-                // Для движущихся плиток - не рисуем в исходной позиции
-                if (animation.Type == AnimationType.Move || animation.Type == AnimationType.Merge)
+                foreach (var animation in game.Animations)
                 {
-                    animatedPositions.Add((animation.From.Row, animation.From.Col));
-                }
+                    if (animation.Type == AnimationType.Move || animation.Type == AnimationType.Merge)
+                    {
+                        animatedPositions.Add((animation.From.Row, animation.From.Col));
+                    }
 
-                // Для появляющихся плиток - не рисуем статически, если анимация не завершена
-                if (animation.Type == AnimationType.Appear && animation.Progress < 0.99f)
-                {
-                    animatedPositions.Add((animation.To.Row, animation.To.Col));
+                    if (animation.Type == AnimationType.Appear && animation.Progress < 0.99f)
+                    {
+                        animatedPositions.Add((animation.To.Row, animation.To.Col));
+                    }
                 }
             }
 
-            // Рисуем статические плитки
             for (int row = 0; row < 4; row++)
             {
                 for (int col = 0; col < 4; col++)
@@ -159,26 +277,39 @@ namespace _2048
                 }
             }
 
-            // Рисуем анимированные плитки с плавными эффектами
-            foreach (var animation in game.Animations)
+            if (game.Animations != null)
             {
-                DrawAnimatedTile(g, animation, font);
+                foreach (var animation in game.Animations)
+                {
+                    DrawAnimatedTile(g, animation, font);
+                }
             }
+        }
+
+        private int GetFontSize()
+        {
+            if (tileSize < 60) return 12;
+            if (tileSize < 80) return 14;
+            if (tileSize < 100) return 16;
+            return 18;
         }
 
         private void DrawGridBackground(Graphics g)
         {
+            if (currentTheme == null) return;
+
+            var theme = currentTheme;
             for (int row = 0; row < 4; row++)
             {
                 for (int col = 0; col < 4; col++)
                 {
-                    int x = col * TileSize + (col + 1) * GridPadding;
-                    int y = row * TileSize + (row + 1) * GridPadding + 40;
+                    int x = col * tileSize + (col + 1) * gridPadding;
+                    int y = row * tileSize + (row + 1) * gridPadding + 40;
 
                     DrawRoundedRectangle(g,
-                        new Rectangle(x, y, TileSize, TileSize),
-                        Color.FromArgb(205, 193, 180),
-                        Color.DarkGray,
+                        new Rectangle(x, y, tileSize, tileSize),
+                        theme.GridColor,
+                        theme.BorderColor,
                         2,
                         CornerRadius);
                 }
@@ -187,28 +318,25 @@ namespace _2048
 
         private void DrawAnimatedTile(Graphics g, Animation animation, Font font)
         {
-            int fromX = animation.From.Col * TileSize + (animation.From.Col + 1) * GridPadding;
-            int fromY = animation.From.Row * TileSize + (animation.From.Row + 1) * GridPadding + 40;
-            int toX = animation.To.Col * TileSize + (animation.To.Col + 1) * GridPadding;
-            int toY = animation.To.Row * TileSize + (animation.To.Row + 1) * GridPadding + 40;
+            int fromX = animation.From.Col * tileSize + (animation.From.Col + 1) * gridPadding;
+            int fromY = animation.From.Row * tileSize + (animation.From.Row + 1) * gridPadding + 40;
+            int toX = animation.To.Col * tileSize + (animation.To.Col + 1) * gridPadding;
+            int toY = animation.To.Row * tileSize + (animation.To.Row + 1) * gridPadding + 40;
 
-            // Плавная easing функция для более естественного движения
             float easedProgress = EaseOutCubic(animation.Progress);
 
             if (animation.Type == AnimationType.Appear)
             {
-                // Анимация появления с упругим эффектом
                 float scale = EaseOutBack(animation.Progress);
-                int width = (int)(TileSize * scale);
-                int height = (int)(TileSize * scale);
-                int currentX = toX + (TileSize - width) / 2;
-                int currentY = toY + (TileSize - height) / 2;
+                int width = (int)(tileSize * scale);
+                int height = (int)(tileSize * scale);
+                int currentX = toX + (tileSize - width) / 2;
+                int currentY = toY + (tileSize - height) / 2;
 
                 DrawScaledTile(g, currentX, currentY, width, height, animation.Value, font);
             }
             else if (animation.Type == AnimationType.Move)
             {
-                // Плавное движение с easing
                 int currentX = fromX + (int)((toX - fromX) * easedProgress);
                 int currentY = fromY + (int)((toY - fromY) * easedProgress);
 
@@ -216,39 +344,34 @@ namespace _2048
             }
             else if (animation.Type == AnimationType.Merge)
             {
-                // Анимация слияния с пульсацией
                 int currentX = fromX + (int)((toX - fromX) * easedProgress);
                 int currentY = fromY + (int)((toY - fromY) * easedProgress);
 
                 float pulseScale = 1.0f;
                 if (animation.Progress < 0.7f)
                 {
-                    // Движение к цели
                     pulseScale = 1.0f;
                 }
                 else
                 {
-                    // Пульсация при достижении цели
                     float pulseProgress = (animation.Progress - 0.7f) / 0.3f;
                     pulseScale = 1.0f + (float)Math.Sin(pulseProgress * Math.PI) * 0.2f;
                 }
 
-                int width = (int)(TileSize * pulseScale);
-                int height = (int)(TileSize * pulseScale);
-                int offsetX = (TileSize - width) / 2;
-                int offsetY = (TileSize - height) / 2;
+                int width = (int)(tileSize * pulseScale);
+                int height = (int)(tileSize * pulseScale);
+                int offsetX = (tileSize - width) / 2;
+                int offsetY = (tileSize - height) / 2;
 
                 DrawScaledTile(g, currentX + offsetX, currentY + offsetY, width, height, animation.Value, font);
             }
         }
 
-        // Easing функция для плавного ускорения и замедления
         private float EaseOutCubic(float progress)
         {
             return 1 - (float)Math.Pow(1 - progress, 3);
         }
 
-        // Easing функция с упругим эффектом для появления
         private float EaseOutBack(float progress)
         {
             float c1 = 1.70158f;
@@ -261,16 +384,19 @@ namespace _2048
         {
             if (width <= 0 || height <= 0) return;
 
-            Color backgroundColor = GetTileColor(value);
-            Color textColor = value > 4 ? Color.White : Color.Black;
+            if (currentTheme == null) return;
 
-            float scale = Math.Min((float)width / TileSize, (float)height / TileSize);
+            var theme = currentTheme;
+            Color backgroundColor = GetTileColor(value, theme);
+            Color textColor = theme.GetTextColorForTile(value);
+
+            float scale = Math.Min((float)width / tileSize, (float)height / tileSize);
             int scaledRadius = (int)(CornerRadius * scale);
 
             DrawRoundedRectangle(g,
                 new Rectangle(x, y, width, height),
                 backgroundColor,
-                Color.Gray,
+                theme.BorderColor,
                 2,
                 Math.Max(2, scaledRadius));
 
@@ -280,8 +406,8 @@ namespace _2048
                 format.Alignment = StringAlignment.Center;
                 format.LineAlignment = StringAlignment.Center;
 
-                float scaleFactor = Math.Min((float)width / TileSize, (float)height / TileSize);
-                float fontSize = Math.Max(10.0f, font.Size * scaleFactor);
+                float scaleFactor = Math.Min((float)width / tileSize, (float)height / tileSize);
+                float fontSize = Math.Max(8.0f, font.Size * scaleFactor);
 
                 using (var scaledFont = new Font(font.FontFamily, fontSize, font.Style))
                 using (var textBrush = new SolidBrush(textColor))
@@ -294,13 +420,16 @@ namespace _2048
 
         private void DrawTileAtPosition(Graphics g, int x, int y, int value, Font font)
         {
-            Color backgroundColor = GetTileColor(value);
-            Color textColor = value > 4 ? Color.White : Color.Black;
+            if (currentTheme == null) return;
+
+            var theme = currentTheme;
+            Color backgroundColor = GetTileColor(value, theme);
+            Color textColor = theme.GetTextColorForTile(value);
 
             DrawRoundedRectangle(g,
-                new Rectangle(x, y, TileSize, TileSize),
+                new Rectangle(x, y, tileSize, tileSize),
                 backgroundColor,
-                Color.Gray,
+                theme.BorderColor,
                 2,
                 CornerRadius);
 
@@ -313,16 +442,21 @@ namespace _2048
                 using (var textBrush = new SolidBrush(textColor))
                 {
                     g.DrawString(value.ToString(), font, textBrush,
-                        new RectangleF(x, y, TileSize, TileSize), format);
+                        new RectangleF(x, y, tileSize, tileSize), format);
                 }
             }
         }
 
         private void DrawTile(Graphics g, int row, int col, int value, Font font)
         {
-            int x = col * TileSize + (col + 1) * GridPadding;
-            int y = row * TileSize + (row + 1) * GridPadding + 40;
+            int x = col * tileSize + (col + 1) * gridPadding;
+            int y = row * tileSize + (row + 1) * gridPadding + 40;
             DrawTileAtPosition(g, x, y, value, font);
+        }
+
+        private Color GetTileColor(int value, ColorTheme theme)
+        {
+            return theme.GetTileColor(value);
         }
 
         private void DrawRoundedRectangle(Graphics g, Rectangle rect, Color fillColor, Color borderColor, int borderWidth, int radius)
@@ -375,45 +509,27 @@ namespace _2048
             return path;
         }
 
-        private Color GetTileColor(int value)
-        {
-            switch (value)
-            {
-                case 0: return Color.FromArgb(205, 193, 180);
-                case 2: return Color.FromArgb(238, 228, 218);
-                case 4: return Color.FromArgb(237, 224, 200);
-                case 8: return Color.FromArgb(242, 177, 121);
-                case 16: return Color.FromArgb(245, 149, 99);
-                case 32: return Color.FromArgb(246, 124, 95);
-                case 64: return Color.FromArgb(246, 94, 59);
-                case 128: return Color.FromArgb(237, 207, 114);
-                case 256: return Color.FromArgb(237, 204, 97);
-                case 512: return Color.FromArgb(237, 200, 80);
-                case 1024: return Color.FromArgb(237, 197, 63);
-                case 2048: return Color.FromArgb(237, 194, 46);
-                default: return Color.FromArgb(60, 58, 50);
-            }
-        }
-
         private void DrawGameOver(Graphics g)
         {
-            // Полупрозрачный темный фон
-            using (var brush = new SolidBrush(Color.FromArgb(200, 0, 0, 0)))
+            if (currentTheme == null) return;
+
+            var theme = currentTheme;
+
+            using (var brush = new SolidBrush(Color.FromArgb(200, theme.OverlayColor)))
             {
                 g.FillRectangle(brush, 0, 0, this.ClientSize.Width, this.ClientSize.Height);
             }
 
-            // Сообщение с закругленным фоном
             Rectangle messageRect = new Rectangle(
                 this.ClientSize.Width / 2 - 160,
                 this.ClientSize.Height / 2 - 80,
                 320, 160
             );
 
-            DrawRoundedRectangle(g, messageRect, Color.FromArgb(240, 80, 80, 80), Color.White, 3, 25);
+            DrawRoundedRectangle(g, messageRect, theme.DialogColor, theme.BorderColor, 3, 25);
 
             using (var font = new Font("Arial", 28, FontStyle.Bold))
-            using (var brush = new SolidBrush(Color.White))
+            using (var brush = new SolidBrush(theme.DialogTextColor))
             {
                 StringFormat format = new StringFormat();
                 format.Alignment = StringAlignment.Center;
@@ -433,20 +549,22 @@ namespace _2048
 
         private void DrawWinMessage(Graphics g)
         {
-            // Полупрозрачный золотой фон
-            using (var brush = new SolidBrush(Color.FromArgb(200, 255, 215, 0)))
+            if (currentTheme == null) return;
+
+            var theme = currentTheme;
+
+            using (var brush = new SolidBrush(Color.FromArgb(200, Color.Gold)))
             {
                 g.FillRectangle(brush, 0, 0, this.ClientSize.Width, this.ClientSize.Height);
             }
 
-            // Сообщение с закругленным фоном
             Rectangle messageRect = new Rectangle(
                 this.ClientSize.Width / 2 - 160,
                 this.ClientSize.Height / 2 - 80,
                 320, 160
             );
 
-            DrawRoundedRectangle(g, messageRect, Color.FromArgb(240, 255, 200, 0), Color.DarkGoldenrod, 3, 25);
+            DrawRoundedRectangle(g, messageRect, Color.Gold, Color.DarkGoldenrod, 3, 25);
 
             using (var font = new Font("Arial", 28, FontStyle.Bold))
             using (var brush = new SolidBrush(Color.DarkRed))
@@ -469,15 +587,16 @@ namespace _2048
 
         private void UpdateScore()
         {
-            scoreLabel.Text = $"Score: {game.Score}";
+            if (scoreLabel != null && game != null)
+            {
+                scoreLabel.Text = $"Score: {game.Score}";
+            }
         }
 
         private void MainForm_KeyDown(object sender, KeyEventArgs e)
         {
-            // Блокируем управление во время анимации
-            if (animationTimer.Enabled) return;
+            if (game == null || animationTimer.Enabled) return;
 
-            // Сбрасываем флаги окончания игры при любом действии
             if (e.KeyCode != Keys.R)
             {
                 showGameOver = false;
@@ -504,17 +623,28 @@ namespace _2048
                     showWin = false;
                     this.Invalidate();
                     return;
+                case Keys.T:
+                    ToggleTheme();
+                    return;
+                case Keys.F:
+                    ToggleFullscreen();
+                    return;
+                case Keys.Escape:
+                    if (isFullscreen)
+                    {
+                        ToggleFullscreen();
+                    }
+                    return;
                 default:
                     return;
             }
 
-            if (game.Animations.Count > 0)
+            if (game.Animations != null && game.Animations.Count > 0)
             {
                 animationTimer.Start();
             }
             else
             {
-                // Если анимаций нет, сразу проверяем статус игры
                 if (game.GameOver)
                 {
                     showGameOver = true;
@@ -531,6 +661,102 @@ namespace _2048
         {
             base.OnMouseDown(e);
             this.Focus();
+        }
+
+        protected override void OnPreviewKeyDown(PreviewKeyDownEventArgs e)
+        {
+            if (e.KeyCode == Keys.Tab)
+            {
+                e.IsInputKey = true;
+            }
+            base.OnPreviewKeyDown(e);
+        }
+    }
+
+    public class ColorTheme
+    {
+        public static ColorTheme Light => new ColorTheme
+        {
+            BackgroundColor = Color.White,
+            TextColor = Color.Black,
+            GridColor = Color.FromArgb(205, 193, 180),
+            BorderColor = Color.DarkGray,
+            DialogColor = Color.FromArgb(240, 240, 240),
+            DialogTextColor = Color.Black,
+            OverlayColor = Color.Black
+        };
+
+        public static ColorTheme Dark => new ColorTheme
+        {
+            BackgroundColor = Color.FromArgb(30, 30, 30),
+            TextColor = Color.White,
+            GridColor = Color.FromArgb(80, 80, 80),
+            BorderColor = Color.Gray,
+            DialogColor = Color.FromArgb(70, 70, 70),
+            DialogTextColor = Color.White,
+            OverlayColor = Color.Black
+        };
+
+        public Color BackgroundColor { get; set; }
+        public Color TextColor { get; set; }
+        public Color GridColor { get; set; }
+        public Color BorderColor { get; set; }
+        public Color DialogColor { get; set; }
+        public Color DialogTextColor { get; set; }
+        public Color OverlayColor { get; set; }
+
+        public Color GetTileColor(int value)
+        {
+            if (this == Dark)
+            {
+                switch (value)
+                {
+                    case 0: return Color.FromArgb(60, 60, 60);
+                    case 2: return Color.FromArgb(100, 100, 150);
+                    case 4: return Color.FromArgb(80, 120, 180);
+                    case 8: return Color.FromArgb(60, 140, 200);
+                    case 16: return Color.FromArgb(40, 160, 220);
+                    case 32: return Color.FromArgb(20, 180, 240);
+                    case 64: return Color.FromArgb(0, 200, 255);
+                    case 128: return Color.FromArgb(255, 200, 0);
+                    case 256: return Color.FromArgb(255, 160, 0);
+                    case 512: return Color.FromArgb(255, 120, 0);
+                    case 1024: return Color.FromArgb(255, 80, 0);
+                    case 2048: return Color.FromArgb(255, 40, 0);
+                    default: return Color.FromArgb(255, 0, 0);
+                }
+            }
+            else
+            {
+                switch (value)
+                {
+                    case 0: return Color.FromArgb(205, 193, 180);
+                    case 2: return Color.FromArgb(238, 228, 218);
+                    case 4: return Color.FromArgb(237, 224, 200);
+                    case 8: return Color.FromArgb(242, 177, 121);
+                    case 16: return Color.FromArgb(245, 149, 99);
+                    case 32: return Color.FromArgb(246, 124, 95);
+                    case 64: return Color.FromArgb(246, 94, 59);
+                    case 128: return Color.FromArgb(237, 207, 114);
+                    case 256: return Color.FromArgb(237, 204, 97);
+                    case 512: return Color.FromArgb(237, 200, 80);
+                    case 1024: return Color.FromArgb(237, 197, 63);
+                    case 2048: return Color.FromArgb(237, 194, 46);
+                    default: return Color.FromArgb(60, 58, 50);
+                }
+            }
+        }
+
+        public Color GetTextColorForTile(int value)
+        {
+            if (this == Dark)
+            {
+                return value <= 4 ? Color.White : Color.Black;
+            }
+            else
+            {
+                return value > 4 ? Color.White : Color.Black;
+            }
         }
     }
 }
