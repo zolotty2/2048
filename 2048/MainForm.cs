@@ -11,7 +11,7 @@ namespace _2048
         private Game2048 game;
         private int tileSize = 80;
         private int gridPadding = 10;
-        private const int CornerRadius = 12;
+        private const int CornerRadius = 10;
         private Label scoreLabel;
         private Label instructionsLabel;
         private System.Windows.Forms.Timer animationTimer;
