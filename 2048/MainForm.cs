@@ -16,7 +16,11 @@ namespace _2048
         private Label scoreLabel;
         private Label instructionsLabel;
         private System.Windows.Forms.Timer animationTimer;
-        private float animationSpeed = 0.15f; // Немного увеличил скорость анимации
+        private float animationSpeed = 0.08f; // Более плавная скорость
+
+        // Флаг для отслеживания показа экрана окончания
+        private bool showGameOver = false;
+        private bool showWin = false;
 
         public MainForm()
         {
@@ -55,7 +59,7 @@ namespace _2048
         private void InitializeAnimationTimer()
         {
             animationTimer = new System.Windows.Forms.Timer();
-            animationTimer.Interval = 16;
+            animationTimer.Interval = 16; // 60 FPS
             animationTimer.Tick += AnimationTimer_Tick;
         }
 
@@ -65,7 +69,9 @@ namespace _2048
 
             foreach (var animation in game.Animations)
             {
+                // Используем квадратичную функцию для более плавного движения
                 animation.Progress += animationSpeed;
+
                 if (animation.Progress < 1.0f)
                 {
                     animationsFinished = false;
@@ -81,16 +87,18 @@ namespace _2048
             if (animationsFinished)
             {
                 animationTimer.Stop();
-                // После завершения анимации проверяем статус игры
-                CheckAndShowGameStatus();
-            }
-        }
 
-        private void CheckAndShowGameStatus()
-        {
-            if (game.GameOver || game.Won)
-            {
-                this.Invalidate(); // Принудительно перерисовываем для показа экрана окончания
+                // После завершения всех анимаций проверяем статус игры
+                if (game.GameOver)
+                {
+                    showGameOver = true;
+                }
+                else if (game.Won)
+                {
+                    showWin = true;
+                }
+
+                this.Invalidate(); // Принудительная перерисовка для показа экрана окончания
             }
         }
 
@@ -104,17 +112,14 @@ namespace _2048
             UpdateScore();
             DrawGrid(e.Graphics);
 
-            // Рисуем экран окончания поверх всего, если игра завершена и анимации закончились
-            if ((game.GameOver || game.Won) && !animationTimer.Enabled && game.Animations.Count == 0)
+            // Рисуем экран окончания поверх всего, если игра завершена
+            if (showGameOver)
             {
-                if (game.GameOver)
-                {
-                    DrawGameOver(e.Graphics);
-                }
-                else if (game.Won)
-                {
-                    DrawWinMessage(e.Graphics);
-                }
+                DrawGameOver(e.Graphics);
+            }
+            else if (showWin)
+            {
+                DrawWinMessage(e.Graphics);
             }
         }
 
@@ -125,41 +130,36 @@ namespace _2048
 
             DrawGridBackground(g);
 
-            // Сначала рисуем все статические плитки, которые не участвуют в анимациях
+            // Собираем все позиции, которые участвуют в анимациях
+            var animatedPositions = new HashSet<(int, int)>();
+            foreach (var animation in game.Animations)
+            {
+                // Для движущихся плиток - не рисуем в исходной позиции
+                if (animation.Type == AnimationType.Move || animation.Type == AnimationType.Merge)
+                {
+                    animatedPositions.Add((animation.From.Row, animation.From.Col));
+                }
+
+                // Для появляющихся плиток - не рисуем статически, если анимация не завершена
+                if (animation.Type == AnimationType.Appear && animation.Progress < 0.99f)
+                {
+                    animatedPositions.Add((animation.To.Row, animation.To.Col));
+                }
+            }
+
+            // Рисуем статические плитки
             for (int row = 0; row < 4; row++)
             {
                 for (int col = 0; col < 4; col++)
                 {
-                    bool isAnimated = false;
-
-                    // Проверяем, участвует ли эта позиция в любой анимации
-                    foreach (var animation in game.Animations)
-                    {
-                        // Для анимаций Move и Merge - не рисуем плитку в исходной позиции
-                        if ((animation.Type == AnimationType.Move || animation.Type == AnimationType.Merge) &&
-                            animation.From.Row == row && animation.From.Col == col)
-                        {
-                            isAnimated = true;
-                            break;
-                        }
-                        // Для анимаций Appear - не рисуем плитку, если она только появляется
-                        if (animation.Type == AnimationType.Appear &&
-                            animation.To.Row == row && animation.To.Col == col &&
-                            animation.Progress < 1.0f)
-                        {
-                            isAnimated = true;
-                            break;
-                        }
-                    }
-
-                    if (!isAnimated && grid[row, col] != 0)
+                    if (!animatedPositions.Contains((row, col)) && grid[row, col] != 0)
                     {
                         DrawTile(g, row, col, grid[row, col], font);
                     }
                 }
             }
 
-            // Затем рисуем все анимированные плитки
+            // Рисуем анимированные плитки с плавными эффектами
             foreach (var animation in game.Animations)
             {
                 DrawAnimatedTile(g, animation, font);
@@ -192,52 +192,69 @@ namespace _2048
             int toX = animation.To.Col * TileSize + (animation.To.Col + 1) * GridPadding;
             int toY = animation.To.Row * TileSize + (animation.To.Row + 1) * GridPadding + 40;
 
-            int currentX, currentY;
+            // Плавная easing функция для более естественного движения
+            float easedProgress = EaseOutCubic(animation.Progress);
 
             if (animation.Type == AnimationType.Appear)
             {
-                // Анимация появления - масштабирование от центра
-                float scale = animation.Progress;
+                // Анимация появления с упругим эффектом
+                float scale = EaseOutBack(animation.Progress);
                 int width = (int)(TileSize * scale);
                 int height = (int)(TileSize * scale);
-                currentX = toX + (TileSize - width) / 2;
-                currentY = toY + (TileSize - height) / 2;
+                int currentX = toX + (TileSize - width) / 2;
+                int currentY = toY + (TileSize - height) / 2;
 
                 DrawScaledTile(g, currentX, currentY, width, height, animation.Value, font);
             }
-            else
+            else if (animation.Type == AnimationType.Move)
             {
-                // Анимация перемещения или слияния
-                currentX = fromX + (int)((toX - fromX) * animation.Progress);
-                currentY = fromY + (int)((toY - fromY) * animation.Progress);
+                // Плавное движение с easing
+                int currentX = fromX + (int)((toX - fromX) * easedProgress);
+                int currentY = fromY + (int)((toY - fromY) * easedProgress);
 
-                if (animation.Type == AnimationType.Merge)
+                DrawTileAtPosition(g, currentX, currentY, animation.Value, font);
+            }
+            else if (animation.Type == AnimationType.Merge)
+            {
+                // Анимация слияния с пульсацией
+                int currentX = fromX + (int)((toX - fromX) * easedProgress);
+                int currentY = fromY + (int)((toY - fromY) * easedProgress);
+
+                float pulseScale = 1.0f;
+                if (animation.Progress < 0.7f)
                 {
-                    // Анимация слияния - пульсация
-                    float pulseScale = 1.0f;
-                    if (animation.Progress < 0.5f)
-                    {
-                        // Первая половина - движение
-                        pulseScale = 1.0f;
-                    }
-                    else
-                    {
-                        // Вторая половина - пульсация при слиянии
-                        pulseScale = 1.0f + (animation.Progress - 0.5f) * 0.3f;
-                    }
-
-                    int width = (int)(TileSize * pulseScale);
-                    int height = (int)(TileSize * pulseScale);
-                    int offsetX = (TileSize - width) / 2;
-                    int offsetY = (TileSize - height) / 2;
-
-                    DrawScaledTile(g, currentX + offsetX, currentY + offsetY, width, height, animation.Value, font);
+                    // Движение к цели
+                    pulseScale = 1.0f;
                 }
                 else
                 {
-                    DrawTileAtPosition(g, currentX, currentY, animation.Value, font);
+                    // Пульсация при достижении цели
+                    float pulseProgress = (animation.Progress - 0.7f) / 0.3f;
+                    pulseScale = 1.0f + (float)Math.Sin(pulseProgress * Math.PI) * 0.2f;
                 }
+
+                int width = (int)(TileSize * pulseScale);
+                int height = (int)(TileSize * pulseScale);
+                int offsetX = (TileSize - width) / 2;
+                int offsetY = (TileSize - height) / 2;
+
+                DrawScaledTile(g, currentX + offsetX, currentY + offsetY, width, height, animation.Value, font);
             }
+        }
+
+        // Easing функция для плавного ускорения и замедления
+        private float EaseOutCubic(float progress)
+        {
+            return 1 - (float)Math.Pow(1 - progress, 3);
+        }
+
+        // Easing функция с упругим эффектом для появления
+        private float EaseOutBack(float progress)
+        {
+            float c1 = 1.70158f;
+            float c3 = c1 + 1;
+
+            return 1 + c3 * (float)Math.Pow(progress - 1, 3) + c1 * (float)Math.Pow(progress - 1, 2);
         }
 
         private void DrawScaledTile(Graphics g, int x, int y, int width, int height, int value, Font font)
@@ -257,7 +274,7 @@ namespace _2048
                 2,
                 Math.Max(2, scaledRadius));
 
-            if (value != 0 && width > 10 && height > 10) // Увеличил минимальный размер для текста
+            if (value != 0 && width > 15 && height > 15)
             {
                 StringFormat format = new StringFormat();
                 format.Alignment = StringAlignment.Center;
@@ -370,7 +387,7 @@ namespace _2048
                 case 32: return Color.FromArgb(246, 124, 95);
                 case 64: return Color.FromArgb(246, 94, 59);
                 case 128: return Color.FromArgb(237, 207, 114);
-                case 256: return Color.FromArgb(250, 224, 115); 
+                case 256: return Color.FromArgb(237, 204, 97);
                 case 512: return Color.FromArgb(237, 200, 80);
                 case 1024: return Color.FromArgb(237, 197, 63);
                 case 2048: return Color.FromArgb(237, 194, 46);
@@ -381,21 +398,21 @@ namespace _2048
         private void DrawGameOver(Graphics g)
         {
             // Полупрозрачный темный фон
-            using (var brush = new SolidBrush(Color.FromArgb(180, 0, 0, 0)))
+            using (var brush = new SolidBrush(Color.FromArgb(200, 0, 0, 0)))
             {
                 g.FillRectangle(brush, 0, 0, this.ClientSize.Width, this.ClientSize.Height);
             }
 
             // Сообщение с закругленным фоном
             Rectangle messageRect = new Rectangle(
-                this.ClientSize.Width / 2 - 150,
-                this.ClientSize.Height / 2 - 60,
-                300, 120
+                this.ClientSize.Width / 2 - 160,
+                this.ClientSize.Height / 2 - 80,
+                320, 160
             );
 
-            DrawRoundedRectangle(g, messageRect, Color.FromArgb(240, 50, 50, 50), Color.White, 3, 20);
+            DrawRoundedRectangle(g, messageRect, Color.FromArgb(240, 80, 80, 80), Color.White, 3, 25);
 
-            using (var font = new Font("Arial", 24, FontStyle.Bold))
+            using (var font = new Font("Arial", 28, FontStyle.Bold))
             using (var brush = new SolidBrush(Color.White))
             {
                 StringFormat format = new StringFormat();
@@ -409,29 +426,30 @@ namespace _2048
                     messageRect.Height
                 );
 
-                g.DrawString("Game Over!\nPress R to Restart", font, brush, textRect, format);
+                g.DrawString("Game Over!\n\nScore: " + game.Score + "\n\nPress R to Restart",
+                    font, brush, textRect, format);
             }
         }
 
         private void DrawWinMessage(Graphics g)
         {
-            // Полупрозрачный зеленый фон
-            using (var brush = new SolidBrush(Color.FromArgb(180, 0, 100, 0)))
+            // Полупрозрачный золотой фон
+            using (var brush = new SolidBrush(Color.FromArgb(200, 255, 215, 0)))
             {
                 g.FillRectangle(brush, 0, 0, this.ClientSize.Width, this.ClientSize.Height);
             }
 
             // Сообщение с закругленным фоном
             Rectangle messageRect = new Rectangle(
-                this.ClientSize.Width / 2 - 150,
-                this.ClientSize.Height / 2 - 60,
-                300, 120
+                this.ClientSize.Width / 2 - 160,
+                this.ClientSize.Height / 2 - 80,
+                320, 160
             );
 
-            DrawRoundedRectangle(g, messageRect, Color.FromArgb(240, 60, 140, 60), Color.White, 3, 20);
+            DrawRoundedRectangle(g, messageRect, Color.FromArgb(240, 255, 200, 0), Color.DarkGoldenrod, 3, 25);
 
-            using (var font = new Font("Arial", 24, FontStyle.Bold))
-            using (var brush = new SolidBrush(Color.White))
+            using (var font = new Font("Arial", 28, FontStyle.Bold))
+            using (var brush = new SolidBrush(Color.DarkRed))
             {
                 StringFormat format = new StringFormat();
                 format.Alignment = StringAlignment.Center;
@@ -444,7 +462,8 @@ namespace _2048
                     messageRect.Height
                 );
 
-                g.DrawString("You Win!\nPress R to Restart", font, brush, textRect, format);
+                g.DrawString("You Win!\n\nScore: " + game.Score + "\n\nPress R to Restart",
+                    font, brush, textRect, format);
             }
         }
 
@@ -457,6 +476,13 @@ namespace _2048
         {
             // Блокируем управление во время анимации
             if (animationTimer.Enabled) return;
+
+            // Сбрасываем флаги окончания игры при любом действии
+            if (e.KeyCode != Keys.R)
+            {
+                showGameOver = false;
+                showWin = false;
+            }
 
             switch (e.KeyCode)
             {
@@ -474,8 +500,10 @@ namespace _2048
                     break;
                 case Keys.R:
                     game.Restart();
-                    this.Invalidate(); // Немедленная перерисовка после рестарта
-                    break;
+                    showGameOver = false;
+                    showWin = false;
+                    this.Invalidate();
+                    return;
                 default:
                     return;
             }
@@ -487,10 +515,16 @@ namespace _2048
             else
             {
                 // Если анимаций нет, сразу проверяем статус игры
-                CheckAndShowGameStatus();
+                if (game.GameOver)
+                {
+                    showGameOver = true;
+                }
+                else if (game.Won)
+                {
+                    showWin = true;
+                }
+                this.Invalidate();
             }
-
-            this.Invalidate();
         }
 
         protected override void OnMouseDown(MouseEventArgs e)
