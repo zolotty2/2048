@@ -10,7 +10,12 @@ namespace _2048
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(new MainForm());
+
+            // Загружаем настройки
+            var settings = SkinManager.LoadSettings();
+
+            // Запускаем стартовый экран
+            Application.Run(new StartScreenForm(settings));
         }
     }
 }

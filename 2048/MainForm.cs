@@ -11,15 +11,15 @@ namespace _2048
         private Game2048 game;
         private int tileSize = 80;
         private int gridPadding = 10;
-        private const int CornerRadius = 10;
+        private const int CornerRadius = 8;
         private Label scoreLabel;
         private Label instructionsLabel;
         private System.Windows.Forms.Timer animationTimer;
-        private float animationSpeed = 0.08f;
+        private float animationSpeed = 0.10f;
 
-        // Настройки темы
-        private bool darkTheme = false;
-        private ColorTheme currentTheme;
+        // Настройки скинов
+        private SkinSettings settings;
+        private Skin currentSkin;
 
         // Флаги для UI
         private bool showGameOver = false;
@@ -27,11 +27,14 @@ namespace _2048
         private bool isFullscreen = false;
         private FormWindowState previousWindowState;
 
-        public MainForm()
+        public MainForm(SkinSettings settings)
         {
+            this.settings = settings;
             InitializeComponent();
             InitializeComponents();
         }
+
+       
 
         private void InitializeComponents()
         {
@@ -43,7 +46,8 @@ namespace _2048
 
         private void InitializeTheme()
         {
-            currentTheme = darkTheme ? ColorTheme.Dark : ColorTheme.Light;
+            currentSkin = SkinManager.GetSkin(settings.CurrentSkin);
+            animationSpeed = 0.05f + (settings.AnimationSpeed * 0.005f);
         }
 
         private void InitializeGame()
@@ -54,9 +58,7 @@ namespace _2048
             this.Resize += MainForm_Resize;
             this.SizeChanged += MainForm_SizeChanged;
 
-            // Устанавливаем начальный размер окна
-            this.ClientSize = new Size(550, 730);
-            this.MinimumSize = new Size(400, 500);
+            this.MinimumSize = new Size(600, 800);
             this.Text = "2048 Game";
 
             this.Focus();
@@ -77,9 +79,9 @@ namespace _2048
             // Instructions label
             instructionsLabel = new Label();
             instructionsLabel.Location = new Point(gridPadding, 400);
-            instructionsLabel.Size = new Size(400, 80);
+            instructionsLabel.Size = new Size(400, 120);
             instructionsLabel.Font = new Font("Arial", 10);
-            instructionsLabel.Text = "Управление:\r\nСтрелки - движение плиток\r\nR - начать заново\r\nF - полноэкранный режим\r\nT - сменить тему\r\nESC - выход из полноэкранного режима";
+            instructionsLabel.Text = "Управление:\r\nСтрелки - движение плиток\r\nR - начать заново\r\nF - полноэкранный режим\r\nESC - выход";
             instructionsLabel.TabStop = false;
             this.Controls.Add(instructionsLabel);
 
@@ -93,7 +95,7 @@ namespace _2048
                 return;
 
             int availableWidth = this.ClientSize.Width - (5 * gridPadding);
-            int availableHeight = this.ClientSize.Height - (5 * gridPadding) - 100;
+            int availableHeight = this.ClientSize.Height - (5 * gridPadding) - 150;
 
             tileSize = Math.Min(availableWidth / 4, availableHeight / 4);
             tileSize = Math.Max(40, tileSize);
@@ -102,7 +104,8 @@ namespace _2048
             // Обновляем позиции элементов управления
             if (instructionsLabel != null)
             {
-                instructionsLabel.Location = new Point(gridPadding, 4 * tileSize + 5 * gridPadding + 60);
+                instructionsLabel.Location = new Point(gridPadding, 4 * tileSize + 5 * gridPadding + 80);
+                instructionsLabel.Size = new Size(this.ClientSize.Width - 2 * gridPadding, 120);
             }
         }
 
@@ -111,14 +114,6 @@ namespace _2048
             animationTimer = new System.Windows.Forms.Timer();
             animationTimer.Interval = 16;
             animationTimer.Tick += AnimationTimer_Tick;
-        }
-
-        private void ToggleTheme()
-        {
-            darkTheme = !darkTheme;
-            currentTheme = darkTheme ? ColorTheme.Dark : ColorTheme.Light;
-            UpdateTheme();
-            this.Invalidate();
         }
 
         private void ToggleFullscreen()
@@ -145,26 +140,24 @@ namespace _2048
 
         private void UpdateTheme()
         {
-            if (currentTheme == null) return;
+            if (currentSkin == null) return;
 
-            var theme = currentTheme;
-
-            this.BackColor = theme.BackgroundColor;
+            this.BackColor = currentSkin.BackgroundColorValue;
 
             if (scoreLabel != null)
             {
-                scoreLabel.ForeColor = theme.TextColor;
-                scoreLabel.BackColor = theme.BackgroundColor;
+                scoreLabel.ForeColor = currentSkin.TextColorValue;
+                scoreLabel.BackColor = currentSkin.BackgroundColorValue;
             }
 
             if (instructionsLabel != null)
             {
-                instructionsLabel.ForeColor = theme.TextColor;
-                instructionsLabel.BackColor = theme.BackgroundColor;
+                instructionsLabel.ForeColor = currentSkin.TextColorValue;
+                instructionsLabel.BackColor = currentSkin.BackgroundColorValue;
             }
         }
 
-        private void AnimationTimer_Tick(object sender, EventArgs e)
+        private void AnimationTimer_Tick(object? sender, EventArgs e)
         {
             if (game == null || game.Animations == null) return;
 
@@ -203,19 +196,19 @@ namespace _2048
             }
         }
 
-        private void MainForm_Resize(object sender, EventArgs e)
+        private void MainForm_Resize(object? sender, EventArgs e)
         {
             CalculateSizes();
             this.Invalidate();
         }
 
-        private void MainForm_SizeChanged(object sender, EventArgs e)
+        private void MainForm_SizeChanged(object? sender, EventArgs e)
         {
             CalculateSizes();
             this.Invalidate();
         }
 
-        private void MainForm_Load(object sender, EventArgs e)
+        private void MainForm_Load(object? sender, EventArgs e)
         {
             CalculateSizes();
             this.Focus();
@@ -296,9 +289,8 @@ namespace _2048
 
         private void DrawGridBackground(Graphics g)
         {
-            if (currentTheme == null) return;
+            if (currentSkin == null) return;
 
-            var theme = currentTheme;
             for (int row = 0; row < 4; row++)
             {
                 for (int col = 0; col < 4; col++)
@@ -308,8 +300,8 @@ namespace _2048
 
                     DrawRoundedRectangle(g,
                         new Rectangle(x, y, tileSize, tileSize),
-                        theme.GridColor,
-                        theme.BorderColor,
+                        currentSkin.GridColorValue,
+                        currentSkin.GridColorValue,
                         2,
                         CornerRadius);
                 }
@@ -384,11 +376,10 @@ namespace _2048
         {
             if (width <= 0 || height <= 0) return;
 
-            if (currentTheme == null) return;
+            if (currentSkin == null) return;
 
-            var theme = currentTheme;
-            Color backgroundColor = GetTileColor(value, theme);
-            Color textColor = theme.GetTextColorForTile(value);
+            Color backgroundColor = currentSkin.GetTileColorValue(value);
+            Color textColor = currentSkin.GetTextColorForTile(value);
 
             float scale = Math.Min((float)width / tileSize, (float)height / tileSize);
             int scaledRadius = (int)(CornerRadius * scale);
@@ -396,7 +387,7 @@ namespace _2048
             DrawRoundedRectangle(g,
                 new Rectangle(x, y, width, height),
                 backgroundColor,
-                theme.BorderColor,
+                currentSkin.GridColorValue,
                 2,
                 Math.Max(2, scaledRadius));
 
@@ -420,16 +411,15 @@ namespace _2048
 
         private void DrawTileAtPosition(Graphics g, int x, int y, int value, Font font)
         {
-            if (currentTheme == null) return;
+            if (currentSkin == null) return;
 
-            var theme = currentTheme;
-            Color backgroundColor = GetTileColor(value, theme);
-            Color textColor = theme.GetTextColorForTile(value);
+            Color backgroundColor = currentSkin.GetTileColorValue(value);
+            Color textColor = currentSkin.GetTextColorForTile(value);
 
             DrawRoundedRectangle(g,
                 new Rectangle(x, y, tileSize, tileSize),
                 backgroundColor,
-                theme.BorderColor,
+                currentSkin.GridColorValue,
                 2,
                 CornerRadius);
 
@@ -452,11 +442,6 @@ namespace _2048
             int x = col * tileSize + (col + 1) * gridPadding;
             int y = row * tileSize + (row + 1) * gridPadding + 40;
             DrawTileAtPosition(g, x, y, value, font);
-        }
-
-        private Color GetTileColor(int value, ColorTheme theme)
-        {
-            return theme.GetTileColor(value);
         }
 
         private void DrawRoundedRectangle(Graphics g, Rectangle rect, Color fillColor, Color borderColor, int borderWidth, int radius)
@@ -511,62 +496,75 @@ namespace _2048
 
         private void DrawGameOver(Graphics g)
         {
-            if (currentTheme == null) return;
+            if (currentSkin == null) return;
 
-            var theme = currentTheme;
-
-            using (var brush = new SolidBrush(Color.FromArgb(200, theme.OverlayColor)))
+            using (var brush = new SolidBrush(Color.FromArgb(200, Color.Black)))
             {
                 g.FillRectangle(brush, 0, 0, this.ClientSize.Width, this.ClientSize.Height);
             }
 
+            int messageWidth = Math.Min(320, this.ClientSize.Width - 40);
+            int messageHeight = Math.Min(200, this.ClientSize.Height - 40);
+
             Rectangle messageRect = new Rectangle(
-                this.ClientSize.Width / 2 - 160,
-                this.ClientSize.Height / 2 - 80,
-                320, 160
+                (this.ClientSize.Width - messageWidth) / 2,
+                (this.ClientSize.Height - messageHeight) / 2,
+                messageWidth,
+                messageHeight
             );
 
-            DrawRoundedRectangle(g, messageRect, theme.DialogColor, theme.BorderColor, 3, 25);
+            DrawRoundedRectangle(g, messageRect, currentSkin.BackgroundColorValue, currentSkin.GridColorValue, 3, 15);
 
-            using (var font = new Font("Arial", 28, FontStyle.Bold))
-            using (var brush = new SolidBrush(theme.DialogTextColor))
+            using (var font = new Font("Arial", GetMessageFontSize(), FontStyle.Bold))
+            using (var brush = new SolidBrush(currentSkin.TextColorValue))
             {
                 StringFormat format = new StringFormat();
                 format.Alignment = StringAlignment.Center;
                 format.LineAlignment = StringAlignment.Center;
 
                 RectangleF textRect = new RectangleF(
-                    messageRect.Left,
-                    messageRect.Top,
-                    messageRect.Width,
-                    messageRect.Height
+                    messageRect.Left + 10,
+                    messageRect.Top + 10,
+                    messageRect.Width - 20,
+                    messageRect.Height - 20
                 );
 
-                g.DrawString("\nGame Over!\n\nScore: " + game.Score + "\n\n\nPress R to Restart",
-                    font, brush, textRect, format);
+                string gameOverText = $"Game Over!\n\nScore: {game.Score}\n\nPress R to Restart";
+
+                g.DrawString(gameOverText, font, brush, textRect, format);
             }
+        }
+
+        private int GetMessageFontSize()
+        {
+            int baseSize = 16;
+            if (this.ClientSize.Width < 500) return baseSize - 4;
+            if (this.ClientSize.Width < 600) return baseSize - 2;
+            return baseSize;
         }
 
         private void DrawWinMessage(Graphics g)
         {
-            if (currentTheme == null) return;
-
-            var theme = currentTheme;
+            if (currentSkin == null) return;
 
             using (var brush = new SolidBrush(Color.FromArgb(200, Color.Gold)))
             {
                 g.FillRectangle(brush, 0, 0, this.ClientSize.Width, this.ClientSize.Height);
             }
 
+            int messageWidth = Math.Min(320, this.ClientSize.Width - 40);
+            int messageHeight = Math.Min(200, this.ClientSize.Height - 40);
+
             Rectangle messageRect = new Rectangle(
-                this.ClientSize.Width / 2 - 160,
-                this.ClientSize.Height / 2 - 80,
-                320, 160
+                (this.ClientSize.Width - messageWidth) / 2,
+                (this.ClientSize.Height - messageHeight) / 2,
+                messageWidth,
+                messageHeight
             );
 
-            DrawRoundedRectangle(g, messageRect, Color.Gold, Color.DarkGoldenrod, 3, 25);
+            DrawRoundedRectangle(g, messageRect, Color.Gold, Color.DarkGoldenrod, 3, 15);
 
-            using (var font = new Font("Arial", 28, FontStyle.Bold))
+            using (var font = new Font("Arial", GetMessageFontSize(), FontStyle.Bold))
             using (var brush = new SolidBrush(Color.DarkRed))
             {
                 StringFormat format = new StringFormat();
@@ -574,14 +572,15 @@ namespace _2048
                 format.LineAlignment = StringAlignment.Center;
 
                 RectangleF textRect = new RectangleF(
-                    messageRect.Left,
-                    messageRect.Top,
-                    messageRect.Width,
-                    messageRect.Height
+                    messageRect.Left + 10,
+                    messageRect.Top + 10,
+                    messageRect.Width - 20,
+                    messageRect.Height - 20
                 );
 
-                g.DrawString("You Win!\n\nScore: " + game.Score + "\n\nPress R to Restart",
-                    font, brush, textRect, format);
+                string winText = $"You Win!\n\nScore: {game.Score}\n\nPress R to Restart";
+
+                g.DrawString(winText, font, brush, textRect, format);
             }
         }
 
@@ -593,7 +592,7 @@ namespace _2048
             }
         }
 
-        private void MainForm_KeyDown(object sender, KeyEventArgs e)
+        private void MainForm_KeyDown(object? sender, KeyEventArgs e)
         {
             if (game == null || animationTimer.Enabled) return;
 
@@ -623,9 +622,6 @@ namespace _2048
                     showWin = false;
                     this.Invalidate();
                     return;
-                case Keys.T:
-                    ToggleTheme();
-                    return;
                 case Keys.F:
                     ToggleFullscreen();
                     return;
@@ -633,6 +629,10 @@ namespace _2048
                     if (isFullscreen)
                     {
                         ToggleFullscreen();
+                    }
+                    else
+                    {
+                        this.Close();
                     }
                     return;
                 default:
@@ -670,93 +670,6 @@ namespace _2048
                 e.IsInputKey = true;
             }
             base.OnPreviewKeyDown(e);
-        }
-    }
-
-    public class ColorTheme
-    {
-        public static ColorTheme Light => new ColorTheme
-        {
-            BackgroundColor = Color.White,
-            TextColor = Color.Black,
-            GridColor = Color.FromArgb(205, 193, 180),
-            BorderColor = Color.DarkGray,
-            DialogColor = Color.FromArgb(240, 240, 240),
-            DialogTextColor = Color.Black,
-            OverlayColor = Color.Black
-        };
-
-        public static ColorTheme Dark => new ColorTheme
-        {
-            BackgroundColor = Color.FromArgb(30, 30, 30),
-            TextColor = Color.White,
-            GridColor = Color.FromArgb(80, 80, 80),
-            BorderColor = Color.Gray,
-            DialogColor = Color.FromArgb(70, 70, 70),
-            DialogTextColor = Color.White,
-            OverlayColor = Color.Black
-        };
-
-        public Color BackgroundColor { get; set; }
-        public Color TextColor { get; set; }
-        public Color GridColor { get; set; }
-        public Color BorderColor { get; set; }
-        public Color DialogColor { get; set; }
-        public Color DialogTextColor { get; set; }
-        public Color OverlayColor { get; set; }
-
-        public Color GetTileColor(int value)
-        {
-            if (this == Dark)
-            {
-                switch (value)
-                {
-                    case 0: return Color.FromArgb(60, 60, 60);
-                    case 2: return Color.FromArgb(100, 100, 150);
-                    case 4: return Color.FromArgb(80, 120, 180);
-                    case 8: return Color.FromArgb(60, 140, 200);
-                    case 16: return Color.FromArgb(40, 160, 220);
-                    case 32: return Color.FromArgb(20, 180, 240);
-                    case 64: return Color.FromArgb(0, 200, 255);
-                    case 128: return Color.FromArgb(255, 200, 0);
-                    case 256: return Color.FromArgb(255, 160, 0);
-                    case 512: return Color.FromArgb(255, 120, 0);
-                    case 1024: return Color.FromArgb(255, 80, 0);
-                    case 2048: return Color.FromArgb(255, 40, 0);
-                    default: return Color.FromArgb(255, 0, 0);
-                }
-            }
-            else
-            {
-                switch (value)
-                {
-                    case 0: return Color.FromArgb(205, 193, 180);
-                    case 2: return Color.FromArgb(238, 228, 218);
-                    case 4: return Color.FromArgb(237, 224, 200);
-                    case 8: return Color.FromArgb(242, 177, 121);
-                    case 16: return Color.FromArgb(245, 149, 99);
-                    case 32: return Color.FromArgb(246, 124, 95);
-                    case 64: return Color.FromArgb(246, 94, 59);
-                    case 128: return Color.FromArgb(237, 207, 114);
-                    case 256: return Color.FromArgb(237, 204, 97);
-                    case 512: return Color.FromArgb(237, 200, 80);
-                    case 1024: return Color.FromArgb(237, 197, 63);
-                    case 2048: return Color.FromArgb(237, 194, 46);
-                    default: return Color.FromArgb(60, 58, 50);
-                }
-            }
-        }
-
-        public Color GetTextColorForTile(int value)
-        {
-            if (this == Dark)
-            {
-                return value <= 4 ? Color.White : Color.Black;
-            }
-            else
-            {
-                return value > 4 ? Color.White : Color.Black;
-            }
         }
     }
 }
