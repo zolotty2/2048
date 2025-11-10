@@ -131,7 +131,7 @@ namespace _2048
             ["Forest"] = new Skin
             {
                 Name = "Forest",
-                BackgroundColor = "#2D5016",
+                BackgroundColor = "#425E17",
                 GridColor = "#5A8C2D",
                 TextColor = "#F7F7F7",
                 TileColors = new Dictionary<int, string>
