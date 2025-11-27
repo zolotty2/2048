@@ -1,3 +1,4 @@
+// ЗАМЕНИТЕ весь файл на этот:
 using System;
 using System.Drawing;
 using System.Windows.Forms;
@@ -13,6 +14,7 @@ namespace _2048
         private int gridPadding = 10;
         private const int CornerRadius = 8;
         private Label scoreLabel;
+        private Label winsLabel;
         private Label instructionsLabel;
         private System.Windows.Forms.Timer animationTimer;
         private float animationSpeed = 0.10f;
@@ -31,12 +33,10 @@ namespace _2048
         {
             this.settings = settings;
             InitializeComponent();
-            InitializeComponents();
+            InitializeGameComponents();
         }
 
-       
-
-        private void InitializeComponents()
+        private void InitializeGameComponents()
         {
             InitializeTheme();
             InitializeGame();
@@ -65,6 +65,13 @@ namespace _2048
             this.DoubleBuffered = true;
         }
 
+        private void InitializeAnimationTimer()
+        {
+            animationTimer = new System.Windows.Forms.Timer();
+            animationTimer.Interval = 16;
+            animationTimer.Tick += AnimationTimer_Tick;
+        }
+
         private void InitializeControls()
         {
             // Score label
@@ -75,6 +82,15 @@ namespace _2048
             scoreLabel.Text = "Score: 0";
             scoreLabel.TabStop = false;
             this.Controls.Add(scoreLabel);
+
+            // Wins label
+            winsLabel = new Label();
+            winsLabel.Location = new Point(gridPadding, gridPadding + 35);
+            winsLabel.Size = new Size(200, 25);
+            winsLabel.Font = new Font("Arial", 10, FontStyle.Bold);
+            winsLabel.Text = $"Wins: {GameStatsManager.GetTotalWins()}";
+            winsLabel.TabStop = false;
+            this.Controls.Add(winsLabel);
 
             // Instructions label
             instructionsLabel = new Label();
@@ -102,18 +118,16 @@ namespace _2048
             tileSize = Math.Min(120, tileSize);
 
             // Обновляем позиции элементов управления
+            if (winsLabel != null)
+            {
+                winsLabel.Location = new Point(gridPadding, gridPadding + 35);
+            }
+
             if (instructionsLabel != null)
             {
                 instructionsLabel.Location = new Point(gridPadding, 4 * tileSize + 5 * gridPadding + 80);
                 instructionsLabel.Size = new Size(this.ClientSize.Width - 2 * gridPadding, 120);
             }
-        }
-
-        private void InitializeAnimationTimer()
-        {
-            animationTimer = new System.Windows.Forms.Timer();
-            animationTimer.Interval = 16;
-            animationTimer.Tick += AnimationTimer_Tick;
         }
 
         private void ToggleFullscreen()
@@ -148,6 +162,13 @@ namespace _2048
             {
                 scoreLabel.ForeColor = currentSkin.TextColorValue;
                 scoreLabel.BackColor = currentSkin.BackgroundColorValue;
+            }
+
+            if (winsLabel != null)
+            {
+                winsLabel.ForeColor = currentSkin.TextColorValue;
+                winsLabel.BackColor = currentSkin.BackgroundColorValue;
+                winsLabel.Text = $"Wins: {GameStatsManager.GetTotalWins()}";
             }
 
             if (instructionsLabel != null)
@@ -617,6 +638,12 @@ namespace _2048
                     game.Move(Direction.Right);
                     break;
                 case Keys.R:
+                    // Записываем победу если она была достигнута
+                    if (game.FirstWinAchieved)
+                    {
+                        GameStatsManager.RecordWin();
+                        UpdateTheme(); // Обновляем счётчик побед
+                    }
                     game.Restart();
                     showGameOver = false;
                     showWin = false;

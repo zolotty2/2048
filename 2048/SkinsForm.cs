@@ -1,4 +1,5 @@
-﻿using System;
+﻿
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
@@ -97,45 +98,86 @@ namespace _2048
         private Control CreateSkinControl(Skin skin)
         {
             var panel = new Panel();
-            panel.Size = new Size(200, 80);
+            panel.Size = new Size(200, 100);
             panel.Margin = new Padding(5);
             panel.BorderStyle = BorderStyle.FixedSingle;
             panel.Cursor = Cursors.Hand;
             panel.Tag = skin.Name;
 
+            // Проверяем, разблокирован ли скин
+            bool isLocked = skin.Name == "Royal" && !GameStatsManager.IsRoyalSkinUnlocked();
+
             // Превью цветов плиток
             var previewPanel = new FlowLayoutPanel();
             previewPanel.Location = new Point(10, 10);
-            previewPanel.Size = new Size(120, 60);
+            previewPanel.Size = new Size(120, 40);
             previewPanel.Margin = new Padding(0);
 
-            // Добавляем несколько плиток для превью
-            int[] previewValues = { 2, 4, 8, 128 };
-            foreach (var value in previewValues)
+            if (!isLocked)
             {
-                var tilePanel = new Panel();
-                tilePanel.Size = new Size(25, 25);
-                tilePanel.Margin = new Padding(2);
-                tilePanel.BackColor = skin.GetTileColorValue(value);
-                previewPanel.Controls.Add(tilePanel);
+                // Добавляем несколько плиток для превью
+                int[] previewValues = { 2, 4, 8, 128 };
+                foreach (var value in previewValues)
+                {
+                    var tilePanel = new Panel();
+                    tilePanel.Size = new Size(25, 25);
+                    tilePanel.Margin = new Padding(2);
+                    tilePanel.BackColor = skin.GetTileColorValue(value);
+                    previewPanel.Controls.Add(tilePanel);
+                }
+            }
+            else
+            {
+                // Показываем замок для заблокированного скина
+                var lockLabel = new Label();
+                lockLabel.Text = "🔒";
+                lockLabel.Font = new Font("Arial", 16);
+                lockLabel.Size = new Size(40, 40);
+                lockLabel.TextAlign = ContentAlignment.MiddleCenter;
+                previewPanel.Controls.Add(lockLabel);
             }
 
             // Название скина
             var nameLabel = new Label();
             nameLabel.Text = skin.Name;
-            nameLabel.Location = new Point(140, 30);
+            nameLabel.Location = new Point(140, 15);
             nameLabel.Size = new Size(50, 20);
             nameLabel.TextAlign = ContentAlignment.MiddleLeft;
 
+            // Информация о разблокировке
+            var unlockLabel = new Label();
+            unlockLabel.Location = new Point(10, 55);
+            unlockLabel.Size = new Size(180, 30);
+            unlockLabel.TextAlign = ContentAlignment.MiddleCenter;
+            unlockLabel.Font = new Font("Arial", 8);
+
+            if (isLocked)
+            {
+                unlockLabel.Text = "Win 1 game to unlock";
+                unlockLabel.ForeColor = Color.Gray;
+                panel.Cursor = Cursors.No;
+                panel.BackColor = Color.LightGray;
+            }
+            else
+            {
+                unlockLabel.Text = "✓ Unlocked";
+                unlockLabel.ForeColor = Color.Green;
+            }
+
             panel.Controls.Add(previewPanel);
             panel.Controls.Add(nameLabel);
+            panel.Controls.Add(unlockLabel);
 
-            panel.Click += (s, e) => SelectSkin(skin.Name);
-            previewPanel.Click += (s, e) => SelectSkin(skin.Name);
-            nameLabel.Click += (s, e) => SelectSkin(skin.Name);
+            if (!isLocked)
+            {
+                panel.Click += SkinControl_Click;
+                previewPanel.Click += SkinControl_Click;
+                nameLabel.Click += SkinControl_Click;
+                unlockLabel.Click += SkinControl_Click;
+            }
 
             // Подсветка выбранного скина
-            if (skin.Name == currentSettings.CurrentSkin)
+            if (skin.Name == currentSettings.CurrentSkin && !isLocked)
             {
                 panel.BorderStyle = BorderStyle.Fixed3D;
                 panel.BackColor = Color.FromArgb(50, Color.Yellow);
@@ -144,8 +186,35 @@ namespace _2048
             return panel;
         }
 
+        private void SkinControl_Click(object? sender, EventArgs e)
+        {
+            Control? control = sender as Control;
+            if (control != null)
+            {
+                // Находим родительскую панель скина
+                Panel? skinPanel = control as Panel;
+                if (skinPanel == null)
+                {
+                    skinPanel = control.Parent as Panel;
+                }
+
+                if (skinPanel != null && skinPanel.Tag is string skinName)
+                {
+                    SelectSkin(skinName);
+                }
+            }
+        }
+
         private void SelectSkin(string skinName)
         {
+            // Проверяем, не пытаются ли выбрать заблокированный королевский скин
+            if (skinName == "Royal" && !GameStatsManager.IsRoyalSkinUnlocked())
+            {
+                MessageBox.Show("Win at least one game to unlock the Royal skin!", "Skin Locked",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
             currentSettings.CurrentSkin = skinName;
             LoadSkins(); // Перезагружаем для обновления выделения
             ApplyCurrentSkin();
