@@ -19,11 +19,14 @@ namespace _2048
             ApplySkin();
         }
 
+        private Label winsLabel;
+
+        // В метод InitializeComponent добавляем:
         private void InitializeComponent()
         {
             this.SuspendLayout();
 
-            this.ClientSize = new Size(400, 400);
+            this.ClientSize = new Size(400, 450);
             this.Text = "2048 - Start Screen";
             this.StartPosition = FormStartPosition.CenterScreen;
             this.FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -34,9 +37,18 @@ namespace _2048
             titleLabel.Text = "2048";
             titleLabel.Font = new Font("Arial", 36, FontStyle.Bold);
             titleLabel.Size = new Size(200, 60);
-            titleLabel.Location = new Point(100, 80);
+            titleLabel.Location = new Point(100, 60);
             titleLabel.TextAlign = ContentAlignment.MiddleCenter;
             this.Controls.Add(titleLabel);
+
+            // Счётчик побед
+            winsLabel = new Label();
+            winsLabel.Text = $"Total Wins: {GameStatsManager.GetTotalWins()}";
+            winsLabel.Font = new Font("Arial", 12, FontStyle.Bold);
+            winsLabel.Size = new Size(200, 25);
+            winsLabel.Location = new Point(100, 130);
+            winsLabel.TextAlign = ContentAlignment.MiddleCenter;
+            this.Controls.Add(winsLabel);
 
             // Кнопка начала игры
             startButton = new Button();
@@ -68,12 +80,19 @@ namespace _2048
             this.ResumeLayout(false);
         }
 
+
+        // Обновляем метод ApplySkin для счётчика побед
         private void ApplySkin()
         {
             var skin = SkinManager.GetSkin(settings.CurrentSkin);
 
             this.BackColor = skin.BackgroundColorValue;
             titleLabel.ForeColor = skin.TextColorValue;
+            winsLabel.ForeColor = skin.TextColorValue;
+            winsLabel.BackColor = skin.BackgroundColorValue;
+
+            // Обновляем текст счётчика побед
+            winsLabel.Text = $"Total Wins: {GameStatsManager.GetTotalWins()}";
 
             ApplyButtonSkin(startButton, skin);
             ApplyButtonSkin(skinsButton, skin);
