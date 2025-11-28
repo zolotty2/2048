@@ -1,5 +1,4 @@
-﻿
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
@@ -85,11 +84,11 @@ namespace _2048
         private void LoadSkins()
         {
             skinsPanel.Controls.Clear();
-            var skins = SkinManager.GetAvailableSkins();
+            var skins = SkinSettings.GetAvailableSkins();
 
             foreach (var skinName in skins)
             {
-                var skin = SkinManager.GetSkin(skinName);
+                var skin = SkinSettings.GetSkin(skinName);
                 var skinControl = CreateSkinControl(skin);
                 skinsPanel.Controls.Add(skinControl);
             }
@@ -105,9 +104,9 @@ namespace _2048
             panel.Tag = skin.Name;
 
             // Проверяем, разблокирован ли скин
-            bool isLocked = skin.Name == "Royal" && !GameStatsManager.IsRoyalSkinUnlocked();
+            bool isLocked = !SkinSettings.IsSkinUnlocked(skin.Name);
 
-            // Превью цветов плиток
+            // Превью цветов плиток - используем оригинальные цвета скина
             var previewPanel = new FlowLayoutPanel();
             previewPanel.Location = new Point(10, 10);
             previewPanel.Size = new Size(120, 40);
@@ -115,7 +114,7 @@ namespace _2048
 
             if (!isLocked)
             {
-                // Добавляем несколько плиток для превью
+                // Добавляем несколько плиток для превью с оригинальными цветами
                 int[] previewValues = { 2, 4, 8, 128 };
                 foreach (var value in previewValues)
                 {
@@ -208,7 +207,7 @@ namespace _2048
         private void SelectSkin(string skinName)
         {
             // Проверяем, не пытаются ли выбрать заблокированный королевский скин
-            if (skinName == "Royal" && !GameStatsManager.IsRoyalSkinUnlocked())
+            if (!SkinSettings.IsSkinUnlocked(skinName))
             {
                 MessageBox.Show("Win at least one game to unlock the Royal skin!", "Skin Locked",
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -222,11 +221,16 @@ namespace _2048
 
         private void ApplyCurrentSkin()
         {
-            var skin = SkinManager.GetSkin(currentSettings.CurrentSkin);
+            var skin = SkinSettings.GetSkin(currentSettings.CurrentSkin);
             this.BackColor = skin.BackgroundColorValue;
 
+            // Обновляем только основные элементы формы, но не превью скинов
             foreach (Control control in this.Controls)
             {
+                // Пропускаем панель скинов и её дочерние элементы
+                if (control == skinsPanel || control.Parent == skinsPanel)
+                    continue;
+
                 if (control is Label label)
                 {
                     label.ForeColor = skin.TextColorValue;
@@ -262,12 +266,13 @@ namespace _2048
         private void SaveButton_Click(object? sender, EventArgs e)
         {
             // Сохраняем настройки
-            SkinManager.SaveSettings(currentSettings);
+            SkinSettings.SaveSettings(currentSettings);
 
             // Копируем настройки обратно в оригинальный объект
             originalSettings.CurrentSkin = currentSettings.CurrentSkin;
             originalSettings.AnimationSpeed = currentSettings.AnimationSpeed;
             originalSettings.DarkTheme = currentSettings.DarkTheme;
+            originalSettings.TotalWins = currentSettings.TotalWins;
 
             this.DialogResult = DialogResult.OK;
             this.Close();

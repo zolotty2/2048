@@ -398,6 +398,7 @@ public class Animation
     }
 }
 
+
 public class TilePosition
 {
     public int Row { get; set; }

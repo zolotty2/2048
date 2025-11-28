@@ -12,7 +12,10 @@ namespace _2048
             Application.SetCompatibleTextRenderingDefault(false);
 
             // Загружаем настройки
-            var settings = SkinManager.LoadSettings();
+            var settings = SkinSettings.LoadSettings();
+
+            // Проверяем, что настройки загружены правильно
+            Console.WriteLine($"Loaded settings: Skin={settings.CurrentSkin}, Wins={settings.TotalWins}");
 
             // Запускаем стартовый экран
             Application.Run(new StartScreenForm(settings));

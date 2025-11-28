@@ -10,6 +10,7 @@ namespace _2048
         private Button skinsButton;
         private Button exitButton;
         private Label titleLabel;
+        private Label winsLabel;
         private SkinSettings settings;
 
         public StartScreenForm(SkinSettings settings)
@@ -19,9 +20,6 @@ namespace _2048
             ApplySkin();
         }
 
-        private Label winsLabel;
-
-        // В метод InitializeComponent добавляем:
         private void InitializeComponent()
         {
             this.SuspendLayout();
@@ -80,11 +78,9 @@ namespace _2048
             this.ResumeLayout(false);
         }
 
-
-        // Обновляем метод ApplySkin для счётчика побед
         private void ApplySkin()
         {
-            var skin = SkinManager.GetSkin(settings.CurrentSkin);
+            var skin = SkinSettings.GetSkin(settings.CurrentSkin);
 
             this.BackColor = skin.BackgroundColorValue;
             titleLabel.ForeColor = skin.TextColorValue;
@@ -121,6 +117,12 @@ namespace _2048
             var skinsForm = new SkinsForm(settings);
             if (skinsForm.ShowDialog() == DialogResult.OK)
             {
+                // Обновляем настройки из БД
+                var newSettings = SkinSettings.LoadSettings();
+                settings.CurrentSkin = newSettings.CurrentSkin;
+                settings.AnimationSpeed = newSettings.AnimationSpeed;
+                settings.TotalWins = newSettings.TotalWins;
+
                 ApplySkin(); // Обновляем скин после закрытия окна
             }
         }

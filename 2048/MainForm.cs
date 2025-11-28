@@ -1,4 +1,3 @@
-// ÇÀÌÅÍÈÒÅ גוסü פאיכ םא ‎עמע:
 using System;
 using System.Drawing;
 using System.Windows.Forms;
@@ -46,9 +45,10 @@ namespace _2048
 
         private void InitializeTheme()
         {
-            currentSkin = SkinManager.GetSkin(settings.CurrentSkin);
+            currentSkin = SkinSettings.GetSkin(settings.CurrentSkin);
             animationSpeed = 0.05f + (settings.AnimationSpeed * 0.005f);
         }
+
 
         private void InitializeGame()
         {
