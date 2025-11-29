@@ -10,9 +10,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Remove="bd.json" />
     <None Remove="Properties\bd.json" />
-    <None Remove="skins.json" />
   </ItemGroup>
 
 </Project>

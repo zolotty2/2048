@@ -29,7 +29,7 @@ namespace _2048
         private FormWindowState previousWindowState;
 
         // ¬ертикальный отступ дл€ игрового пол€
-        private const int VerticalOffset = 80;
+        private const int VerticalOffset = 50;
 
         public MainForm(SkinSettings settings)
         {
