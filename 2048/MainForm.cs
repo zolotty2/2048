@@ -28,6 +28,9 @@ namespace _2048
         private bool isFullscreen = false;
         private FormWindowState previousWindowState;
 
+        // Вертикальный отступ для игрового поля
+        private const int VerticalOffset = 80;
+
         public MainForm(SkinSettings settings)
         {
             this.settings = settings;
@@ -48,7 +51,6 @@ namespace _2048
             currentSkin = SkinSettings.GetSkin(settings.CurrentSkin);
             animationSpeed = 0.05f + (settings.AnimationSpeed * 0.005f);
         }
-
 
         private void InitializeGame()
         {
@@ -88,13 +90,13 @@ namespace _2048
             winsLabel.Location = new Point(gridPadding, gridPadding + 35);
             winsLabel.Size = new Size(200, 25);
             winsLabel.Font = new Font("Arial", 10, FontStyle.Bold);
-            winsLabel.Text = $"Wins: {GameStatsManager.GetTotalWins()}";
+            winsLabel.Text = $"Wins: {settings.TotalWins}";
             winsLabel.TabStop = false;
             this.Controls.Add(winsLabel);
 
             // Instructions label
             instructionsLabel = new Label();
-            instructionsLabel.Location = new Point(gridPadding, 400);
+            instructionsLabel.Location = new Point(gridPadding, 4 * tileSize + 5 * gridPadding + VerticalOffset + 80);
             instructionsLabel.Size = new Size(400, 120);
             instructionsLabel.Font = new Font("Arial", 10);
             instructionsLabel.Text = "Управление:\r\nСтрелки - движение плиток\r\nR - начать заново\r\nF - полноэкранный режим\r\nESC - выход";
@@ -111,7 +113,7 @@ namespace _2048
                 return;
 
             int availableWidth = this.ClientSize.Width - (5 * gridPadding);
-            int availableHeight = this.ClientSize.Height - (5 * gridPadding) - 150;
+            int availableHeight = this.ClientSize.Height - (5 * gridPadding) - 150 - VerticalOffset;
 
             tileSize = Math.Min(availableWidth / 4, availableHeight / 4);
             tileSize = Math.Max(40, tileSize);
@@ -125,7 +127,7 @@ namespace _2048
 
             if (instructionsLabel != null)
             {
-                instructionsLabel.Location = new Point(gridPadding, 4 * tileSize + 5 * gridPadding + 80);
+                instructionsLabel.Location = new Point(gridPadding, 4 * tileSize + 5 * gridPadding + VerticalOffset + 80);
                 instructionsLabel.Size = new Size(this.ClientSize.Width - 2 * gridPadding, 120);
             }
         }
@@ -168,7 +170,7 @@ namespace _2048
             {
                 winsLabel.ForeColor = currentSkin.TextColorValue;
                 winsLabel.BackColor = currentSkin.BackgroundColorValue;
-                winsLabel.Text = $"Wins: {GameStatsManager.GetTotalWins()}";
+                winsLabel.Text = $"Wins: {settings.TotalWins}";
             }
 
             if (instructionsLabel != null)
@@ -317,7 +319,7 @@ namespace _2048
                 for (int col = 0; col < 4; col++)
                 {
                     int x = col * tileSize + (col + 1) * gridPadding;
-                    int y = row * tileSize + (row + 1) * gridPadding + 40;
+                    int y = row * tileSize + (row + 1) * gridPadding + 40 + VerticalOffset;
 
                     DrawRoundedRectangle(g,
                         new Rectangle(x, y, tileSize, tileSize),
@@ -329,150 +331,12 @@ namespace _2048
             }
         }
 
-        private void DrawAnimatedTile(Graphics g, Animation animation, Font font)
-        {
-            int fromX = animation.From.Col * tileSize + (animation.From.Col + 1) * gridPadding;
-            int fromY = animation.From.Row * tileSize + (animation.From.Row + 1) * gridPadding + 40;
-            int toX = animation.To.Col * tileSize + (animation.To.Col + 1) * gridPadding;
-            int toY = animation.To.Row * tileSize + (animation.To.Row + 1) * gridPadding + 40;
-
-            float easedProgress = EaseOutCubic(animation.Progress);
-
-            if (animation.Type == AnimationType.Appear)
-            {
-                float scale = EaseOutBack(animation.Progress);
-                int width = (int)(tileSize * scale);
-                int height = (int)(tileSize * scale);
-                int currentX = toX + (tileSize - width) / 2;
-                int currentY = toY + (tileSize - height) / 2;
-
-                DrawScaledTile(g, currentX, currentY, width, height, animation.Value, font);
-            }
-            else if (animation.Type == AnimationType.Move)
-            {
-                int currentX = fromX + (int)((toX - fromX) * easedProgress);
-                int currentY = fromY + (int)((toY - fromY) * easedProgress);
-
-                DrawTileAtPosition(g, currentX, currentY, animation.Value, font);
-            }
-            else if (animation.Type == AnimationType.Merge)
-            {
-                int currentX = fromX + (int)((toX - fromX) * easedProgress);
-                int currentY = fromY + (int)((toY - fromY) * easedProgress);
-
-                float pulseScale = 1.0f;
-                if (animation.Progress < 0.7f)
-                {
-                    pulseScale = 1.0f;
-                }
-                else
-                {
-                    float pulseProgress = (animation.Progress - 0.7f) / 0.3f;
-                    pulseScale = 1.0f + (float)Math.Sin(pulseProgress * Math.PI) * 0.2f;
-                }
-
-                int width = (int)(tileSize * pulseScale);
-                int height = (int)(tileSize * pulseScale);
-                int offsetX = (tileSize - width) / 2;
-                int offsetY = (tileSize - height) / 2;
-
-                DrawScaledTile(g, currentX + offsetX, currentY + offsetY, width, height, animation.Value, font);
-            }
-        }
-
-        private float EaseOutCubic(float progress)
-        {
-            return 1 - (float)Math.Pow(1 - progress, 3);
-        }
-
-        private float EaseOutBack(float progress)
-        {
-            float c1 = 1.70158f;
-            float c3 = c1 + 1;
-
-            return 1 + c3 * (float)Math.Pow(progress - 1, 3) + c1 * (float)Math.Pow(progress - 1, 2);
-        }
-
-        private void DrawScaledTile(Graphics g, int x, int y, int width, int height, int value, Font font)
-        {
-            if (width <= 0 || height <= 0) return;
-
-            if (currentSkin == null) return;
-
-            Color backgroundColor = currentSkin.GetTileColorValue(value);
-            Color textColor = currentSkin.GetTextColorForTile(value);
-
-            float scale = Math.Min((float)width / tileSize, (float)height / tileSize);
-            int scaledRadius = (int)(CornerRadius * scale);
-
-            DrawRoundedRectangle(g,
-                new Rectangle(x, y, width, height),
-                backgroundColor,
-                currentSkin.GridColorValue,
-                2,
-                Math.Max(2, scaledRadius));
-
-            if (value != 0 && width > 15 && height > 15)
-            {
-                StringFormat format = new StringFormat();
-                format.Alignment = StringAlignment.Center;
-                format.LineAlignment = StringAlignment.Center;
-
-                float scaleFactor = Math.Min((float)width / tileSize, (float)height / tileSize);
-                float fontSize = Math.Max(8.0f, font.Size * scaleFactor);
-
-                using (var scaledFont = new Font(font.FontFamily, fontSize, font.Style))
-                using (var textBrush = new SolidBrush(textColor))
-                {
-                    g.DrawString(value.ToString(), scaledFont, textBrush,
-                        new RectangleF(x, y, width, height), format);
-                }
-            }
-        }
-
-        private void DrawTileAtPosition(Graphics g, int x, int y, int value, Font font)
-        {
-            if (currentSkin == null) return;
-
-            Color backgroundColor = currentSkin.GetTileColorValue(value);
-            Color textColor = currentSkin.GetTextColorForTile(value);
-
-            DrawRoundedRectangle(g,
-                new Rectangle(x, y, tileSize, tileSize),
-                backgroundColor,
-                currentSkin.GridColorValue,
-                2,
-                CornerRadius);
-
-            if (value != 0)
-            {
-                StringFormat format = new StringFormat();
-                format.Alignment = StringAlignment.Center;
-                format.LineAlignment = StringAlignment.Center;
-
-                using (var textBrush = new SolidBrush(textColor))
-                {
-                    g.DrawString(value.ToString(), font, textBrush,
-                        new RectangleF(x, y, tileSize, tileSize), format);
-                }
-            }
-        }
-
-        private void DrawTile(Graphics g, int row, int col, int value, Font font)
-        {
-            int x = col * tileSize + (col + 1) * gridPadding;
-            int y = row * tileSize + (row + 1) * gridPadding + 40;
-            DrawTileAtPosition(g, x, y, value, font);
-        }
-
-        private void DrawRoundedRectangle(Graphics g, Rectangle rect, Color fillColor, Color borderColor, int borderWidth, int radius)
+        // Методы для работы с эффектами
+        private void DrawRoundedRectangle(Graphics g, Rectangle rect, Brush fillBrush, Color borderColor, int borderWidth, int radius)
         {
             using (GraphicsPath path = CreateRoundedRectanglePath(rect, radius))
             {
-                using (var fillBrush = new SolidBrush(fillColor))
-                {
-                    g.FillPath(fillBrush, path);
-                }
+                g.FillPath(fillBrush, path);
 
                 if (borderWidth > 0)
                 {
@@ -481,6 +345,14 @@ namespace _2048
                         g.DrawPath(borderPen, path);
                     }
                 }
+            }
+        }
+
+        private void DrawRoundedRectangle(Graphics g, Rectangle rect, Color fillColor, Color borderColor, int borderWidth, int radius)
+        {
+            using (var fillBrush = new SolidBrush(fillColor))
+            {
+                DrawRoundedRectangle(g, rect, fillBrush, borderColor, borderWidth, radius);
             }
         }
 
@@ -515,6 +387,310 @@ namespace _2048
             return path;
         }
 
+        private void DrawTile(Graphics g, int row, int col, int value, Font font)
+        {
+            int x = col * tileSize + (col + 1) * gridPadding;
+            int y = row * tileSize + (row + 1) * gridPadding + 40 + VerticalOffset;
+
+            if (currentSkin != null && currentSkin.HasSpecialEffects)
+            {
+                DrawTileAtPositionWithEffects(g, x, y, value, font);
+            }
+            else
+            {
+                DrawTileAtPosition(g, x, y, value, font);
+            }
+        }
+
+        private void DrawTileAtPosition(Graphics g, int x, int y, int value, Font font)
+        {
+            if (currentSkin == null) return;
+
+            Color backgroundColor = currentSkin.GetTileColorValue(value);
+            Color textColor = currentSkin.GetTextColorForTile(value);
+
+            DrawRoundedRectangle(g,
+                new Rectangle(x, y, tileSize, tileSize),
+                backgroundColor,
+                currentSkin.GridColorValue,
+                2,
+                CornerRadius);
+
+            if (value != 0)
+            {
+                StringFormat format = new StringFormat();
+                format.Alignment = StringAlignment.Center;
+                format.LineAlignment = StringAlignment.Center;
+
+                using (var textBrush = new SolidBrush(textColor))
+                {
+                    g.DrawString(value.ToString(), font, textBrush,
+                        new RectangleF(x, y, tileSize, tileSize), format);
+                }
+            }
+        }
+
+        private void DrawTileAtPositionWithEffects(Graphics g, int x, int y, int value, Font font)
+        {
+            if (currentSkin == null) return;
+
+            Rectangle tileRect = new Rectangle(x, y, tileSize, tileSize);
+
+            // Рисуем свечение ДО плитки
+            if (currentSkin.UseGlowEffect && value >= 8)
+            {
+                currentSkin.DrawGlowEffect(g, tileRect, value);
+            }
+
+            // Используем градиент если скин поддерживает спецэффекты
+            Brush backgroundBrush;
+            if (currentSkin.HasSpecialEffects && currentSkin.UseGradient)
+            {
+                backgroundBrush = currentSkin.CreateGradientBrush(tileRect, value);
+            }
+            else
+            {
+                backgroundBrush = new SolidBrush(currentSkin.GetTileColorValue(value));
+            }
+
+            // Рисуем закругленный прямоугольник
+            DrawRoundedRectangle(g, tileRect, backgroundBrush, currentSkin.GridColorValue, 2, CornerRadius);
+
+            // Рисуем эффект драгоценного камня для плиток от 128
+            if (value >= 128 && currentSkin.Name == "Royal")
+            {
+                DrawGemEffect(g, tileRect, value);
+            }
+
+            // Рисуем специальную рамку для Royal
+            if (currentSkin.Name == "Royal" && currentSkin.BorderWidth > 1 && value >= 16)
+            {
+                currentSkin.DrawSpecialBorder(g, tileRect, value);
+            }
+
+            if (value != 0)
+            {
+                StringFormat format = new StringFormat();
+                format.Alignment = StringAlignment.Center;
+                format.LineAlignment = StringAlignment.Center;
+
+                Color textColor = currentSkin.GetTextColorForTile(value);
+                using (var textBrush = new SolidBrush(textColor))
+                {
+                    g.DrawString(value.ToString(), font, textBrush, tileRect, format);
+                }
+
+                // Рисуем партиклы ПОСЛЕ текста
+                if (currentSkin.UseParticles && value >= 64)
+                {
+                    currentSkin.DrawParticles(g, tileRect, value);
+                }
+
+                // Рисуем блестки ПОСЛЕ текста
+                if (currentSkin.UseSparkleEffect && value >= 128)
+                {
+                    currentSkin.DrawSparkleEffect(g, tileRect, value);
+                }
+            }
+
+            // Освобождаем brush если это градиент
+            if (currentSkin.HasSpecialEffects && currentSkin.UseGradient)
+            {
+                backgroundBrush.Dispose();
+            }
+        }
+
+        private void DrawGemEffect(Graphics g, Rectangle rect, int value)
+        {
+            if (currentSkin == null) return;
+
+            int centerX = rect.X + rect.Width / 2;
+            int centerY = rect.Y + rect.Height / 2;
+            int gemSize = Math.Min(rect.Width, rect.Height) - 15;
+
+            // Определяем цвет граней
+            Color gemColor = value switch
+            {
+                >= 2048 => Color.FromArgb(80, 255, 255, 255),  // Белый для бриллианта
+                >= 1024 => Color.FromArgb(70, 0, 255, 255),    // Голубой для сапфира
+                >= 512 => Color.FromArgb(60, 255, 0, 255),     // Фиолетовый для аметиста
+                >= 256 => Color.FromArgb(50, 255, 255, 0),     // Желтый для топаза
+                >= 128 => Color.FromArgb(40, 0, 255, 0),       // Зеленый для изумруда
+                _ => Color.FromArgb(30, 255, 255, 255)
+            };
+
+            using (var gemPen = new Pen(gemColor, 2f))
+            using (var highlightBrush = new SolidBrush(Color.FromArgb(40, Color.White)))
+            {
+                // Простая огранка в виде звезды
+                Point[] gemPoints = {
+                    new Point(centerX, rect.Y + 8),                    // Верх
+                    new Point(centerX + gemSize/3, centerY - gemSize/6), // Право-верх
+                    new Point(rect.Right - 8, centerY),               // Право
+                    new Point(centerX + gemSize/3, centerY + gemSize/6), // Право-низ
+                    new Point(centerX, rect.Bottom - 8),              // Низ
+                    new Point(centerX - gemSize/3, centerY + gemSize/6), // Лево-низ
+                    new Point(rect.Left + 8, centerY),                // Лево
+                    new Point(centerX - gemSize/3, centerY - gemSize/6)  // Лево-верх
+                };
+
+                // Рисуем контур огранки
+                g.DrawPolygon(gemPen, gemPoints);
+
+                // Добавляем центральный блик
+                g.FillEllipse(highlightBrush, centerX - 3, centerY - 3, 6, 6);
+
+                // Добавляем дополнительные блики
+                g.FillEllipse(highlightBrush, centerX + gemSize / 4 - 2, centerY - gemSize / 4 - 2, 4, 4);
+                g.FillEllipse(highlightBrush, centerX - gemSize / 4 - 2, centerY + gemSize / 4 - 2, 4, 4);
+            }
+        }
+
+        private void DrawAnimatedTile(Graphics g, Animation animation, Font font)
+        {
+            int fromX = animation.From.Col * tileSize + (animation.From.Col + 1) * gridPadding;
+            int fromY = animation.From.Row * tileSize + (animation.From.Row + 1) * gridPadding + 40 + VerticalOffset;
+            int toX = animation.To.Col * tileSize + (animation.To.Col + 1) * gridPadding;
+            int toY = animation.To.Row * tileSize + (animation.To.Row + 1) * gridPadding + 40 + VerticalOffset;
+
+            float easedProgress = EaseOutCubic(animation.Progress);
+
+            if (animation.Type == AnimationType.Appear)
+            {
+                float scale = EaseOutBack(animation.Progress);
+                int width = (int)(tileSize * scale);
+                int height = (int)(tileSize * scale);
+                int currentX = toX + (tileSize - width) / 2;
+                int currentY = toY + (tileSize - height) / 2;
+
+                DrawScaledTileWithEffects(g, currentX, currentY, width, height, animation.Value, font);
+            }
+            else if (animation.Type == AnimationType.Move)
+            {
+                int currentX = fromX + (int)((toX - fromX) * easedProgress);
+                int currentY = fromY + (int)((toY - fromY) * easedProgress);
+
+                if (currentSkin != null && currentSkin.HasSpecialEffects)
+                {
+                    DrawTileAtPositionWithEffects(g, currentX, currentY, animation.Value, font);
+                }
+                else
+                {
+                    DrawTileAtPosition(g, currentX, currentY, animation.Value, font);
+                }
+            }
+            else if (animation.Type == AnimationType.Merge)
+            {
+                int currentX = fromX + (int)((toX - fromX) * easedProgress);
+                int currentY = fromY + (int)((toY - fromY) * easedProgress);
+
+                float pulseScale = 1.0f;
+                if (animation.Progress < 0.7f)
+                {
+                    pulseScale = 1.0f;
+                }
+                else
+                {
+                    float pulseProgress = (animation.Progress - 0.7f) / 0.3f;
+                    pulseScale = 1.0f + (float)Math.Sin(pulseProgress * Math.PI) * 0.2f;
+                }
+
+                int width = (int)(tileSize * pulseScale);
+                int height = (int)(tileSize * pulseScale);
+                int offsetX = (tileSize - width) / 2;
+                int offsetY = (tileSize - height) / 2;
+
+                DrawScaledTileWithEffects(g, currentX + offsetX, currentY + offsetY, width, height, animation.Value, font);
+            }
+        }
+
+        private void DrawScaledTileWithEffects(Graphics g, int x, int y, int width, int height, int value, Font font)
+        {
+            if (width <= 0 || height <= 0) return;
+            if (currentSkin == null) return;
+
+            Rectangle tileRect = new Rectangle(x, y, width, height);
+
+            // Свечение ДО плитки
+            if (currentSkin.UseGlowEffect && value >= 8)
+            {
+                currentSkin.DrawGlowEffect(g, tileRect, value);
+            }
+
+            // Используем градиент если скин поддерживает спецэффекты
+            Brush backgroundBrush;
+            if (currentSkin.HasSpecialEffects && currentSkin.UseGradient)
+            {
+                backgroundBrush = currentSkin.CreateGradientBrush(tileRect, value);
+            }
+            else
+            {
+                backgroundBrush = new SolidBrush(currentSkin.GetTileColorValue(value));
+            }
+
+            float scale = Math.Min((float)width / tileSize, (float)height / tileSize);
+            int scaledRadius = (int)(CornerRadius * scale);
+
+            DrawRoundedRectangle(g, tileRect, backgroundBrush, currentSkin.GridColorValue, 2, Math.Max(2, scaledRadius));
+
+            // Эффект драгоценного камня для анимированных плиток
+            if (value >= 128 && currentSkin.Name == "Royal" && width > 20 && height > 20)
+            {
+                DrawGemEffect(g, tileRect, value);
+            }
+
+            // Специальная рамка
+            if (currentSkin.Name == "Royal" && currentSkin.BorderWidth > 1 && value >= 16)
+            {
+                currentSkin.DrawSpecialBorder(g, tileRect, value);
+            }
+
+            if (value != 0 && width > 15 && height > 15)
+            {
+                StringFormat format = new StringFormat();
+                format.Alignment = StringAlignment.Center;
+                format.LineAlignment = StringAlignment.Center;
+
+                float scaleFactor = Math.Min((float)width / tileSize, (float)height / tileSize);
+                float fontSize = Math.Max(8.0f, font.Size * scaleFactor);
+
+                using (var scaledFont = new Font(font.FontFamily, fontSize, font.Style))
+                using (var textBrush = new SolidBrush(currentSkin.GetTextColorForTile(value)))
+                {
+                    g.DrawString(value.ToString(), scaledFont, textBrush, tileRect, format);
+                }
+
+                // Партиклы и блестки
+                if (currentSkin.UseParticles && value >= 64)
+                {
+                    currentSkin.DrawParticles(g, tileRect, value);
+                }
+
+                if (currentSkin.UseSparkleEffect && value >= 128)
+                {
+                    currentSkin.DrawSparkleEffect(g, tileRect, value);
+                }
+            }
+
+            if (currentSkin.HasSpecialEffects && currentSkin.UseGradient)
+            {
+                backgroundBrush.Dispose();
+            }
+        }
+
+        private float EaseOutCubic(float progress)
+        {
+            return 1 - (float)Math.Pow(1 - progress, 3);
+        }
+
+        private float EaseOutBack(float progress)
+        {
+            float c1 = 1.70158f;
+            float c3 = c1 + 1;
+
+            return 1 + c3 * (float)Math.Pow(progress - 1, 3) + c1 * (float)Math.Pow(progress - 1, 2);
+        }
+
         private void DrawGameOver(Graphics g)
         {
             if (currentSkin == null) return;
@@ -529,7 +705,7 @@ namespace _2048
 
             Rectangle messageRect = new Rectangle(
                 (this.ClientSize.Width - messageWidth) / 2,
-                (this.ClientSize.Height - messageHeight) / 2,
+                (this.ClientSize.Height - messageHeight) / 2 + 40, // Сдвигаем сообщение немного вниз
                 messageWidth,
                 messageHeight
             );
@@ -578,7 +754,7 @@ namespace _2048
 
             Rectangle messageRect = new Rectangle(
                 (this.ClientSize.Width - messageWidth) / 2,
-                (this.ClientSize.Height - messageHeight) / 2,
+                (this.ClientSize.Height - messageHeight) / 2 + 40, // Сдвигаем сообщение немного вниз
                 messageWidth,
                 messageHeight
             );
@@ -642,7 +818,7 @@ namespace _2048
                     if (game.FirstWinAchieved)
                     {
                         GameStatsManager.RecordWin();
-                        UpdateTheme(); // Обновляем счётчик побед
+                        UpdateTheme(); // Обновляем счетчик побед
                     }
                     game.Restart();
                     showGameOver = false;

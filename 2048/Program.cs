@@ -14,9 +14,6 @@ namespace _2048
             // Загружаем настройки
             var settings = SkinSettings.LoadSettings();
 
-            // Проверяем, что настройки загружены правильно
-            Console.WriteLine($"Loaded settings: Skin={settings.CurrentSkin}, Wins={settings.TotalWins}");
-
             // Запускаем стартовый экран
             Application.Run(new StartScreenForm(settings));
         }
