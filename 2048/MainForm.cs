@@ -26,8 +26,14 @@ namespace _2048
         private bool showGameOver = false;
         private bool showWin = false;
 
-        // Вертикальный отступ для игрового поля
-        private const int VerticalOffset = 80;
+        // Подсказки
+        private bool showTips = true;
+        private bool tipsVisible = false;
+        private Rectangle tipsRect;
+        private int currentTipsTab = 0;
+
+        // Исправлено: удалена дублирующаяся константа VerticalOffset
+        private const int VerticalOffset = 50; // Оставляем только одну
 
         // Ссылка на главную форму для возврата
         private Form? startScreenForm;
