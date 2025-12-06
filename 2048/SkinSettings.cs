@@ -15,10 +15,13 @@ namespace _2048
         public int AnimationSpeed { get; set; } = 10;
         public bool DarkTheme { get; set; } = false;
         public int TotalWins { get; set; } = 0;
+        public bool ShowTips { get; set; } = true; // НОВОЕ: показывать подсказки
 
+        // Статические данные скинов
         private static Dictionary<string, Skin> _skins = new Dictionary<string, Skin>();
         private static bool _skinsLoaded = false;
 
+        // Пути к файлам
         private static string GetSettingsPath()
         {
             return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bd.json");
@@ -60,6 +63,7 @@ namespace _2048
                     }
                 }
 
+                // Если файл не найден или пустой, создаем только Classic скин
                 CreateDefaultSkins();
             }
             catch (Exception ex)
@@ -74,6 +78,7 @@ namespace _2048
         {
             _skins.Clear();
 
+            // Создаем только классический скин
             var classicSkin = new Skin
             {
                 Name = "Classic",
@@ -111,6 +116,7 @@ namespace _2048
             if (_skins.ContainsKey(name))
                 return _skins[name];
 
+            // Если скин не найден, возвращаем Classic
             return _skins["Classic"];
         }
 
@@ -126,10 +132,10 @@ namespace _2048
         public static bool IsSkinUnlocked(string skinName)
         {
             if (skinName != "Royal")
-                return true;
+                return true; // Все скины кроме Royal доступны сразу
 
             var settings = LoadSettings();
-            return settings.TotalWins >= 1;
+            return settings.TotalWins >= 1; // Royal требует 1 победу
         }
 
         public static SkinSettings LoadSettings()
@@ -154,6 +160,7 @@ namespace _2048
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
 
+            // Создаем файл настроек по умолчанию
             var defaultSettings = new SkinSettings();
             SaveSettings(defaultSettings);
             return defaultSettings;
@@ -183,7 +190,8 @@ namespace _2048
                 CurrentSkin = this.CurrentSkin,
                 AnimationSpeed = this.AnimationSpeed,
                 DarkTheme = this.DarkTheme,
-                TotalWins = this.TotalWins
+                TotalWins = this.TotalWins,
+                ShowTips = this.ShowTips // Копируем настройку подсказок
             };
         }
     }
@@ -196,7 +204,7 @@ namespace _2048
         public string GridColor { get; set; } = string.Empty;
         public string TextColor { get; set; } = string.Empty;
 
-        // Эффекты
+        // Специальные эффекты (загружаются из JSON)
         public bool HasSpecialEffects { get; set; } = false;
         public bool UseGradient { get; set; } = false;
         public bool ShowCrown { get; set; } = false;
@@ -297,7 +305,7 @@ namespace _2048
             return brightness > 150 ? Color.Black : Color.White;
         }
 
-        // Мягкий градиент для Royal скина
+        // Метод для создания мягкого градиента
         public Brush CreateGradientBrush(Rectangle rect, int value)
         {
             if (!UseGradient)
@@ -385,19 +393,31 @@ namespace _2048
             if (!UseParticles || value < 64) return;
 
             int particleCount = (int)(Math.Min(value / 32, 12) * ParticleDensity);
-            var rand = new Random(value * 123);
+            var rand = new Random(value * 123 + rect.X * 17 + rect.Y * 23);
 
-            using (var particleBrush = new SolidBrush(Color.FromArgb(180, Color.White)))
+            for (int i = 0; i < particleCount; i++)
             {
-                for (int i = 0; i < particleCount; i++)
+                float angle = (float)(rand.NextDouble() * Math.PI * 2);
+                float distance = (float)(rand.NextDouble() * 25) + 10;
+
+                int x = (int)(rect.X + rect.Width / 2 + Math.Cos(angle) * distance);
+                int y = (int)(rect.Y + rect.Height / 2 + Math.Sin(angle) * distance);
+
+                // Разные цвета партиклов в зависимости от значения
+                Color particleColor = value switch
                 {
-                    float angle = (float)(rand.NextDouble() * Math.PI * 2);
-                    float distance = (float)(rand.NextDouble() * 20) + 8;
+                    >= 1024 => Color.Cyan,
+                    >= 512 => Color.Lime,
+                    >= 256 => Color.Yellow,
+                    >= 128 => Color.Orange,
+                    _ => Color.White
+                };
 
-                    int x = (int)(rect.X + rect.Width / 2 + Math.Cos(angle) * distance);
-                    int y = (int)(rect.Y + rect.Height / 2 + Math.Sin(angle) * distance);
+                int size = rand.Next(2, 4);
+                int alpha = rand.Next(150, 230);
 
-                    int size = rand.Next(1, 3);
+                using (var particleBrush = new SolidBrush(Color.FromArgb(alpha, particleColor)))
+                {
                     g.FillEllipse(particleBrush, x, y, size, size);
                 }
             }
@@ -408,31 +428,27 @@ namespace _2048
         {
             if (!UseSparkleEffect || value < 128) return;
 
-            var rand = new Random(value * 456);
-            int sparkleCount = (int)(Math.Min(value / 64, 8) * SparkleFrequency);
+            var rand = new Random(value * 456 + rect.X * 13 + rect.Y * 29);
+            int sparkleCount = (int)(Math.Min(value / 32, 12) * SparkleFrequency);
 
-            using (var sparkleBrush = new SolidBrush(Color.FromArgb(220, Color.White)))
+            for (int i = 0; i < sparkleCount; i++)
             {
-                for (int i = 0; i < sparkleCount; i++)
-                {
-                    int x = rand.Next(rect.X + 8, rect.X + rect.Width - 8);
-                    int y = rand.Next(rect.Y + 8, rect.Y + rect.Height - 8);
+                int x = rand.Next(rect.X + 6, rect.X + rect.Width - 6);
+                int y = rand.Next(rect.Y + 6, rect.Y + rect.Height - 6);
 
-                    // Рисуем маленькую звездочку
-                    DrawSparkle(g, sparkleBrush, x, y, 3);
+                int size = rand.Next(2, 4);
+                int alpha = rand.Next(180, 255);
+
+                using (var sparkleBrush = new SolidBrush(Color.FromArgb(alpha, Color.White)))
+                {
+                    // Рисуем крестообразную блестку
+                    g.FillRectangle(sparkleBrush, x - size / 2, y, size, 1);
+                    g.FillRectangle(sparkleBrush, x, y - size / 2, 1, size);
+
+                    // Добавляем точку в центре
+                    g.FillRectangle(sparkleBrush, x, y, 1, 1);
                 }
             }
-        }
-
-        // Рисуем блестку-звездочку
-        private void DrawSparkle(Graphics g, Brush brush, int x, int y, int size)
-        {
-            // Вертикальная линия
-            g.FillRectangle(brush, x, y - size, 1, size * 2 + 1);
-            // Горизонтальная линия
-            g.FillRectangle(brush, x - size, y, size * 2 + 1, 1);
-            // Диагональ 1
-            g.FillRectangle(brush, x - 1, y - 1, 3, 3);
         }
 
         // Специальная рамка для Royal
@@ -440,7 +456,21 @@ namespace _2048
         {
             if (BorderWidth <= 1 || value < 16) return;
 
-            using (var borderPen = new Pen(SpecialBorderColorValue, BorderWidth))
+            // Разный цвет рамки в зависимости от значения
+            Color borderColor = value switch
+            {
+                >= 2048 => Color.Gold,
+                >= 1024 => Color.Cyan,
+                >= 512 => Color.Lime,
+                >= 256 => Color.Yellow,
+                >= 128 => Color.Orange,
+                >= 64 => Color.Red,
+                >= 32 => Color.Pink,
+                >= 16 => Color.Purple,
+                _ => SpecialBorderColorValue
+            };
+
+            using (var borderPen = new Pen(borderColor, BorderWidth))
             {
                 DrawRoundedRectangle(g, rect, borderPen, 8);
             }

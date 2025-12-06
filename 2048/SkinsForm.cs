@@ -12,6 +12,7 @@ namespace _2048
         private SkinSettings originalSettings;
         private FlowLayoutPanel skinsPanel;
         private TrackBar speedTrackBar;
+        private CheckBox tipsCheckbox;
         private Button saveButton;
         private Button cancelButton;
         private Label speedValueLabel;
@@ -20,7 +21,20 @@ namespace _2048
         {
             this.originalSettings = settings;
             this.currentSettings = settings.Clone();
+
+            // Полностью блокируем изменение размера окна
+            this.FormBorderStyle = FormBorderStyle.FixedSingle;
+            this.MaximizeBox = false;
+            this.MinimizeBox = false;
+            this.SizeGripStyle = SizeGripStyle.Hide;
+
             InitializeComponent();
+
+            // Фиксируем размер окна
+            this.ClientSize = new Size(500, 550);
+            this.MinimumSize = this.Size;
+            this.MaximumSize = this.Size;
+
             LoadSkins();
             UpdateControls();
         }
@@ -282,6 +296,23 @@ namespace _2048
         {
             this.DialogResult = DialogResult.Cancel;
             this.Close();
+        }
+        protected override void WndProc(ref Message m)
+        {
+            const int WM_SYSCOMMAND = 0x0112;
+            const int SC_MAXIMIZE = 0xF030;
+            const int SC_SIZE = 0xF000;
+
+            if (m.Msg == WM_SYSCOMMAND)
+            {
+                int command = m.WParam.ToInt32() & 0xFFF0;
+                if (command == SC_MAXIMIZE || command == SC_SIZE)
+                {
+                    return; // Блокируем максимизацию и изменение размера
+                }
+            }
+
+            base.WndProc(ref m);
         }
     }
 }

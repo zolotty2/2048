@@ -7,6 +7,7 @@ namespace _2048
     public class StartScreenForm : Form
     {
         private Button startButton;
+        private Button rulesButton;
         private Button skinsButton;
         private Button exitButton;
         private Label titleLabel;
@@ -16,7 +17,20 @@ namespace _2048
         public StartScreenForm(SkinSettings settings)
         {
             this.settings = settings;
+
+            // Полностью блокируем изменение размера окна
+            this.FormBorderStyle = FormBorderStyle.FixedSingle;
+            this.MaximizeBox = false;
+            this.MinimizeBox = false;
+            this.SizeGripStyle = SizeGripStyle.Hide;
+
             InitializeComponent();
+
+            // Фиксируем размер окна
+            this.ClientSize = new Size(400, 500);
+            this.MinimumSize = this.Size;
+            this.MaximumSize = this.Size;
+
             ApplySkin();
         }
 
@@ -24,47 +38,48 @@ namespace _2048
         {
             this.SuspendLayout();
 
-            this.ClientSize = new Size(400, 450);
-            this.Text = "2048 - Start Screen";
+            this.ClientSize = new Size(400, 500);
+            this.Text = "2048 - Main Menu";
             this.StartPosition = FormStartPosition.CenterScreen;
             this.FormBorderStyle = FormBorderStyle.FixedDialog;
             this.MaximizeBox = false;
+            this.MinimizeBox = false;
 
             // Заголовок
             titleLabel = new Label();
-            titleLabel.Text = "2048";
-            titleLabel.Font = new Font("Arial", 36, FontStyle.Bold);
-            titleLabel.Size = new Size(200, 60);
-            titleLabel.Location = new Point(100, 60);
-            titleLabel.TextAlign = ContentAlignment.MiddleCenter;
-            this.Controls.Add(titleLabel);
+                titleLabel.Text = "2048";
+                titleLabel.Font = new Font("Arial", 36, FontStyle.Bold);
+                titleLabel.Size = new Size(200, 60);
+                titleLabel.Location = new Point(100, 60);
+                titleLabel.TextAlign = ContentAlignment.MiddleCenter;
+                this.Controls.Add(titleLabel);
 
-            // Счётчик побед
-            winsLabel = new Label();
-            winsLabel.Text = $"Total Wins: {GameStatsManager.GetTotalWins()}";
-            winsLabel.Font = new Font("Arial", 12, FontStyle.Bold);
-            winsLabel.Size = new Size(200, 25);
-            winsLabel.Location = new Point(100, 130);
-            winsLabel.TextAlign = ContentAlignment.MiddleCenter;
-            this.Controls.Add(winsLabel);
+                // Счётчик побед
+                winsLabel = new Label();
+                winsLabel.Text = $"Total Wins: {GameStatsManager.GetTotalWins()}";
+                winsLabel.Font = new Font("Arial", 12, FontStyle.Bold);
+                winsLabel.Size = new Size(200, 25);
+                winsLabel.Location = new Point(100, 130);
+                winsLabel.TextAlign = ContentAlignment.MiddleCenter;
+                this.Controls.Add(winsLabel);
 
-            // Кнопка начала игры
-            startButton = new Button();
-            startButton.Text = "Start Game";
-            startButton.Size = new Size(200, 50);
-            startButton.Location = new Point(100, 180);
-            startButton.Font = new Font("Arial", 14, FontStyle.Bold);
-            startButton.Click += StartButton_Click;
-            this.Controls.Add(startButton);
+                // Кнопка начала игры
+                startButton = new Button();
+                startButton.Text = "Start Game";
+                startButton.Size = new Size(200, 50);
+                startButton.Location = new Point(100, 180);
+                startButton.Font = new Font("Arial", 14, FontStyle.Bold);
+                startButton.Click += StartButton_Click;
+                this.Controls.Add(startButton);
 
-            // Кнопка скинов
-            skinsButton = new Button();
-            skinsButton.Text = "Skins";
-            skinsButton.Size = new Size(200, 50);
-            skinsButton.Location = new Point(100, 250);
-            skinsButton.Font = new Font("Arial", 14);
-            skinsButton.Click += SkinsButton_Click;
-            this.Controls.Add(skinsButton);
+                // Кнопка скинов
+                skinsButton = new Button();
+                skinsButton.Text = "Skins";
+                skinsButton.Size = new Size(200, 50);
+                skinsButton.Location = new Point(100, 250);
+                skinsButton.Font = new Font("Arial", 14);
+                skinsButton.Click += SkinsButton_Click;
+                this.Controls.Add(skinsButton);
 
             // Кнопка выхода
             exitButton = new Button();
@@ -130,6 +145,23 @@ namespace _2048
         private void ExitButton_Click(object? sender, EventArgs e)
         {
             Application.Exit();
+        }
+        protected override void WndProc(ref Message m)
+        {
+            const int WM_SYSCOMMAND = 0x0112;
+            const int SC_MAXIMIZE = 0xF030;
+            const int SC_SIZE = 0xF000;
+
+            if (m.Msg == WM_SYSCOMMAND)
+            {
+                int command = m.WParam.ToInt32() & 0xFFF0;
+                if (command == SC_MAXIMIZE || command == SC_SIZE)
+                {
+                    return; // Блокируем максимизацию и изменение размера
+                }
+            }
+
+            base.WndProc(ref m);
         }
     }
 }

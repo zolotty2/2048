@@ -1,4 +1,4 @@
-using System;
+Ôªøusing System;
 using System.Drawing;
 using System.Windows.Forms;
 using System.Collections.Generic;
@@ -18,24 +18,53 @@ namespace _2048
         private System.Windows.Forms.Timer animationTimer;
         private float animationSpeed = 0.10f;
 
-        // Õ‡ÒÚÓÈÍË ÒÍËÌÓ‚
+        // –ù–∞—Å—Ç—Ä–æ–π–∫–∏ —Å–∫–∏–Ω–æ–≤
         private SkinSettings settings;
         private Skin currentSkin;
 
-        // ‘Î‡„Ë ‰Îˇ UI
+        // –§–ª–∞–≥–∏ –¥–ª—è UI
         private bool showGameOver = false;
         private bool showWin = false;
-        private bool isFullscreen = false;
-        private FormWindowState previousWindowState;
 
-        // ¬ÂÚËÍ‡Î¸Ì˚È ÓÚÒÚÛÔ ‰Îˇ Ë„Ó‚Ó„Ó ÔÓÎˇ
+        // –ü–æ–¥—Å–∫–∞–∑–∫–∏
+        private bool showTips = true;
+        private bool tipsVisible = false;
+        private Rectangle tipsRect;
+        private int currentTipsTab = 0;
         private const int VerticalOffset = 80;
 
-        public MainForm(SkinSettings settings)
+        // –°—Å—ã–ª–∫–∞ –Ω–∞ –≥–ª–∞–≤–Ω—É—é —Ñ–æ—Ä–º—É –¥–ª—è –≤–æ–∑–≤—Ä–∞—Ç–∞
+        private Form? startScreenForm;
+
+        public MainForm(SkinSettings settings, Form? startScreenForm = null)
         {
             this.settings = settings;
+            this.startScreenForm = startScreenForm;
+
+            // –ü–æ–ª–Ω–æ—Å—Ç—å—é –±–ª–æ–∫–∏—Ä—É–µ–º –∏–∑–º–µ–Ω–µ–Ω–∏–µ —Ä–∞–∑–º–µ—Ä–∞ –æ–∫–Ω–∞
+            this.FormBorderStyle = FormBorderStyle.FixedSingle;
+            this.MaximizeBox = false;
+            this.MinimizeBox = false;
+            this.ControlBox = true;
+            this.SizeGripStyle = SizeGripStyle.Hide; // –°–∫—Ä—ã–≤–∞–µ–º —Ä—É—á–∫—É –∏–∑–º–µ–Ω–µ–Ω–∏—è —Ä–∞–∑–º–µ—Ä–∞
+
             InitializeComponent();
+
+            // –§–∏–∫—Å–∏—Ä—É–µ–º —Ä–∞–∑–º–µ—Ä –æ–∫–Ω–∞
+            this.ClientSize = new Size(600, 800);
+            this.MinimumSize = this.Size;
+            this.MaximumSize = this.Size;
+
             InitializeGameComponents();
+        }
+
+        public void ShowTipsFromMenu()
+        {
+            tipsVisible = true;
+            showTips = true;
+            currentTipsTab = 0;
+            CalculateTipsPosition();
+            this.Invalidate();
         }
 
         private void InitializeGameComponents()
@@ -44,6 +73,7 @@ namespace _2048
             InitializeGame();
             InitializeAnimationTimer();
             InitializeControls();
+            CheckShowTips();
         }
 
         private void InitializeTheme()
@@ -57,12 +87,12 @@ namespace _2048
             game = new Game2048();
             this.KeyPreview = true;
             this.KeyDown += MainForm_KeyDown;
-            this.Resize += MainForm_Resize;
-            this.SizeChanged += MainForm_SizeChanged;
 
-            this.MinimumSize = new Size(600, 800);
+            // –£–ë–ò–†–ê–ï–ú –æ–±—Ä–∞–±–æ—Ç—á–∏–∫–∏ —Ä–µ—Å–∞–π–∑–∞ - –æ–Ω–∏ –±–æ–ª—å—à–µ –Ω–µ –Ω—É–∂–Ω—ã
+            // this.Resize -= MainForm_Resize;
+            // this.SizeChanged -= MainForm_SizeChanged;
+
             this.Text = "2048 Game";
-
             this.Focus();
             this.DoubleBuffered = true;
         }
@@ -94,17 +124,28 @@ namespace _2048
             winsLabel.TabStop = false;
             this.Controls.Add(winsLabel);
 
-            // Instructions label
+            // Instructions label - –æ–±–Ω–æ–≤–ª—è–µ–º —Ç–µ–∫—Å—Ç
             instructionsLabel = new Label();
-            instructionsLabel.Location = new Point(gridPadding, 4 * tileSize + 5 * gridPadding + VerticalOffset + 80);
-            instructionsLabel.Size = new Size(400, 120);
+            instructionsLabel.Location = new Point(gridPadding, 700);
+            instructionsLabel.Size = new Size(570, 80);
             instructionsLabel.Font = new Font("Arial", 10);
-            instructionsLabel.Text = "”Ô‡‚ÎÂÌËÂ:\r\n—ÚÂÎÍË - ‰‚ËÊÂÌËÂ ÔÎËÚÓÍ\r\nR - Ì‡˜‡Ú¸ Á‡ÌÓ‚Ó\r\nF - ÔÓÎÌÓ˝Í‡ÌÌ˚È ÂÊËÏ\r\nESC - ‚˚ıÓ‰";
+            instructionsLabel.Text = "–£–ø—Ä–∞–≤–ª–µ–Ω–∏–µ:\r\n–°—Ç—Ä–µ–ª–∫–∏ - –¥–≤–∏–∂–µ–Ω–∏–µ –ø–ª–∏—Ç–æ–∫\r\nR - –Ω–∞—á–∞—Ç—å –∑–∞–Ω–æ–≤–æ\r\nESC - –≤—ã—Ö–æ–¥ –≤ –º–µ–Ω—é";
             instructionsLabel.TabStop = false;
             this.Controls.Add(instructionsLabel);
 
             UpdateTheme();
             CalculateSizes();
+        }
+
+        private void CheckShowTips()
+        {
+            showTips = settings.ShowTips;
+
+            if (showTips)
+            {
+                tipsVisible = true;
+                CalculateTipsPosition();
+            }
         }
 
         private void CalculateSizes()
@@ -119,7 +160,6 @@ namespace _2048
             tileSize = Math.Max(40, tileSize);
             tileSize = Math.Min(120, tileSize);
 
-            // Œ·ÌÓ‚ÎˇÂÏ ÔÓÁËˆËË ˝ÎÂÏÂÌÚÓ‚ ÛÔ‡‚ÎÂÌËˇ
             if (winsLabel != null)
             {
                 winsLabel.Location = new Point(gridPadding, gridPadding + 35);
@@ -127,31 +167,22 @@ namespace _2048
 
             if (instructionsLabel != null)
             {
-                instructionsLabel.Location = new Point(gridPadding, 4 * tileSize + 5 * gridPadding + VerticalOffset + 80);
-                instructionsLabel.Size = new Size(this.ClientSize.Width - 2 * gridPadding, 120);
+                instructionsLabel.Location = new Point(gridPadding, 700);
+                instructionsLabel.Size = new Size(this.ClientSize.Width - 2 * gridPadding, 80);
             }
         }
 
-        private void ToggleFullscreen()
+        private void CalculateTipsPosition()
         {
-            if (isFullscreen)
-            {
-                // ¬˚ıÓ‰ ËÁ ÔÓÎÌÓ˝Í‡ÌÌÓ„Ó ÂÊËÏ‡
-                this.FormBorderStyle = FormBorderStyle.Sizable;
-                this.WindowState = previousWindowState;
-                this.Size = new Size(550, 730);
-                isFullscreen = false;
-            }
-            else
-            {
-                // ¬ıÓ‰ ‚ ÔÓÎÌÓ˝Í‡ÌÌ˚È ÂÊËÏ
-                previousWindowState = this.WindowState;
-                this.FormBorderStyle = FormBorderStyle.None;
-                this.WindowState = FormWindowState.Maximized;
-                isFullscreen = true;
-            }
-            CalculateSizes();
-            this.Invalidate();
+            int messageWidth = Math.Min(400, this.ClientSize.Width - 80);
+            int messageHeight = Math.Min(450, this.ClientSize.Height - 80);
+
+            tipsRect = new Rectangle(
+                (this.ClientSize.Width - messageWidth) / 2,
+                (this.ClientSize.Height - messageHeight) / 2,
+                messageWidth,
+                messageHeight
+            );
         }
 
         private void UpdateTheme()
@@ -219,17 +250,8 @@ namespace _2048
             }
         }
 
-        private void MainForm_Resize(object? sender, EventArgs e)
-        {
-            CalculateSizes();
-            this.Invalidate();
-        }
-
-        private void MainForm_SizeChanged(object? sender, EventArgs e)
-        {
-            CalculateSizes();
-            this.Invalidate();
-        }
+        // –£–î–ê–õ–Ø–ï–ú –º–µ—Ç–æ–¥—ã MainForm_Resize –∏ MainForm_SizeChanged - –æ–Ω–∏ –±–æ–ª—å—à–µ –Ω–µ –Ω—É–∂–Ω—ã
+        // —Ç–∞–∫ –∫–∞–∫ —Ä–∞–∑–º–µ—Ä –æ–∫–Ω–∞ —Ñ–∏–∫—Å–∏—Ä–æ–≤–∞–Ω –∏ –Ω–µ –º–µ–Ω—è–µ—Ç—Å—è
 
         private void MainForm_Load(object? sender, EventArgs e)
         {
@@ -246,13 +268,20 @@ namespace _2048
             UpdateScore();
             DrawGrid(e.Graphics);
 
-            if (showGameOver)
+            if (tipsVisible)
             {
-                DrawGameOver(e.Graphics);
+                DrawTipsWindow(e.Graphics);
             }
-            else if (showWin)
+            else
             {
-                DrawWinMessage(e.Graphics);
+                if (showGameOver)
+                {
+                    DrawGameOver(e.Graphics);
+                }
+                else if (showWin)
+                {
+                    DrawWinMessage(e.Graphics);
+                }
             }
         }
 
@@ -331,7 +360,6 @@ namespace _2048
             }
         }
 
-        // ÃÂÚÓ‰˚ ‰Îˇ ‡·ÓÚ˚ Ò ˝ÙÙÂÍÚ‡ÏË
         private void DrawRoundedRectangle(Graphics g, Rectangle rect, Brush fillBrush, Color borderColor, int borderWidth, int radius)
         {
             using (GraphicsPath path = CreateRoundedRectanglePath(rect, radius))
@@ -436,13 +464,11 @@ namespace _2048
 
             Rectangle tileRect = new Rectangle(x, y, tileSize, tileSize);
 
-            // –ËÒÛÂÏ Ò‚Â˜ÂÌËÂ ƒŒ ÔÎËÚÍË
             if (currentSkin.UseGlowEffect && value >= 8)
             {
                 currentSkin.DrawGlowEffect(g, tileRect, value);
             }
 
-            // »ÒÔÓÎ¸ÁÛÂÏ „‡‰ËÂÌÚ ÂÒÎË ÒÍËÌ ÔÓ‰‰ÂÊË‚‡ÂÚ ÒÔÂˆ˝ÙÙÂÍÚ˚
             Brush backgroundBrush;
             if (currentSkin.HasSpecialEffects && currentSkin.UseGradient)
             {
@@ -453,16 +479,13 @@ namespace _2048
                 backgroundBrush = new SolidBrush(currentSkin.GetTileColorValue(value));
             }
 
-            // –ËÒÛÂÏ Á‡ÍÛ„ÎÂÌÌ˚È ÔˇÏÓÛ„ÓÎ¸ÌËÍ
             DrawRoundedRectangle(g, tileRect, backgroundBrush, currentSkin.GridColorValue, 2, CornerRadius);
 
-            // –ËÒÛÂÏ ˝ÙÙÂÍÚ ‰‡„ÓˆÂÌÌÓ„Ó Í‡ÏÌˇ ‰Îˇ ÔÎËÚÓÍ ÓÚ 128
             if (value >= 128 && currentSkin.Name == "Royal")
             {
                 DrawGemEffect(g, tileRect, value);
             }
 
-            // –ËÒÛÂÏ ÒÔÂˆË‡Î¸ÌÛ˛ ‡ÏÍÛ ‰Îˇ Royal
             if (currentSkin.Name == "Royal" && currentSkin.BorderWidth > 1 && value >= 16)
             {
                 currentSkin.DrawSpecialBorder(g, tileRect, value);
@@ -480,20 +503,17 @@ namespace _2048
                     g.DrawString(value.ToString(), font, textBrush, tileRect, format);
                 }
 
-                // –ËÒÛÂÏ Ô‡ÚËÍÎ˚ œŒ—À≈ ÚÂÍÒÚ‡
                 if (currentSkin.UseParticles && value >= 64)
                 {
                     currentSkin.DrawParticles(g, tileRect, value);
                 }
 
-                // –ËÒÛÂÏ ·ÎÂÒÚÍË œŒ—À≈ ÚÂÍÒÚ‡
                 if (currentSkin.UseSparkleEffect && value >= 128)
                 {
                     currentSkin.DrawSparkleEffect(g, tileRect, value);
                 }
             }
 
-            // ŒÒ‚Ó·ÓÊ‰‡ÂÏ brush ÂÒÎË ˝ÚÓ „‡‰ËÂÌÚ
             if (currentSkin.HasSpecialEffects && currentSkin.UseGradient)
             {
                 backgroundBrush.Dispose();
@@ -508,39 +528,32 @@ namespace _2048
             int centerY = rect.Y + rect.Height / 2;
             int gemSize = Math.Min(rect.Width, rect.Height) - 15;
 
-            // ŒÔÂ‰ÂÎˇÂÏ ˆ‚ÂÚ „‡ÌÂÈ
             Color gemColor = value switch
             {
-                >= 2048 => Color.FromArgb(80, 255, 255, 255),  // ¡ÂÎ˚È ‰Îˇ ·ËÎÎË‡ÌÚ‡
-                >= 1024 => Color.FromArgb(70, 0, 255, 255),    // √ÓÎÛ·ÓÈ ‰Îˇ Ò‡ÔÙË‡
-                >= 512 => Color.FromArgb(60, 255, 0, 255),     // ‘ËÓÎÂÚÓ‚˚È ‰Îˇ ‡ÏÂÚËÒÚ‡
-                >= 256 => Color.FromArgb(50, 255, 255, 0),     // ∆ÂÎÚ˚È ‰Îˇ ÚÓÔ‡Á‡
-                >= 128 => Color.FromArgb(40, 0, 255, 0),       // «ÂÎÂÌ˚È ‰Îˇ ËÁÛÏÛ‰‡
+                >= 2048 => Color.FromArgb(80, 255, 255, 255),
+                >= 1024 => Color.FromArgb(70, 0, 255, 255),
+                >= 512 => Color.FromArgb(60, 255, 0, 255),
+                >= 256 => Color.FromArgb(50, 255, 255, 0),
+                >= 128 => Color.FromArgb(40, 0, 255, 0),
                 _ => Color.FromArgb(30, 255, 255, 255)
             };
 
             using (var gemPen = new Pen(gemColor, 2f))
             using (var highlightBrush = new SolidBrush(Color.FromArgb(40, Color.White)))
             {
-                // œÓÒÚ‡ˇ Ó„‡ÌÍ‡ ‚ ‚Ë‰Â Á‚ÂÁ‰˚
                 Point[] gemPoints = {
-                    new Point(centerX, rect.Y + 8),                    // ¬Âı
-                    new Point(centerX + gemSize/3, centerY - gemSize/6), // œ‡‚Ó-‚Âı
-                    new Point(rect.Right - 8, centerY),               // œ‡‚Ó
-                    new Point(centerX + gemSize/3, centerY + gemSize/6), // œ‡‚Ó-ÌËÁ
-                    new Point(centerX, rect.Bottom - 8),              // ÕËÁ
-                    new Point(centerX - gemSize/3, centerY + gemSize/6), // ÀÂ‚Ó-ÌËÁ
-                    new Point(rect.Left + 8, centerY),                // ÀÂ‚Ó
-                    new Point(centerX - gemSize/3, centerY - gemSize/6)  // ÀÂ‚Ó-‚Âı
+                    new Point(centerX, rect.Y + 8),
+                    new Point(centerX + gemSize/3, centerY - gemSize/6),
+                    new Point(rect.Right - 8, centerY),
+                    new Point(centerX + gemSize/3, centerY + gemSize/6),
+                    new Point(centerX, rect.Bottom - 8),
+                    new Point(centerX - gemSize/3, centerY + gemSize/6),
+                    new Point(rect.Left + 8, centerY),
+                    new Point(centerX - gemSize/3, centerY - gemSize/6)
                 };
 
-                // –ËÒÛÂÏ ÍÓÌÚÛ Ó„‡ÌÍË
                 g.DrawPolygon(gemPen, gemPoints);
-
-                // ƒÓ·‡‚ÎˇÂÏ ˆÂÌÚ‡Î¸Ì˚È ·ÎËÍ
                 g.FillEllipse(highlightBrush, centerX - 3, centerY - 3, 6, 6);
-
-                // ƒÓ·‡‚ÎˇÂÏ ‰ÓÔÓÎÌËÚÂÎ¸Ì˚Â ·ÎËÍË
                 g.FillEllipse(highlightBrush, centerX + gemSize / 4 - 2, centerY - gemSize / 4 - 2, 4, 4);
                 g.FillEllipse(highlightBrush, centerX - gemSize / 4 - 2, centerY + gemSize / 4 - 2, 4, 4);
             }
@@ -611,13 +624,11 @@ namespace _2048
 
             Rectangle tileRect = new Rectangle(x, y, width, height);
 
-            // —‚Â˜ÂÌËÂ ƒŒ ÔÎËÚÍË
             if (currentSkin.UseGlowEffect && value >= 8)
             {
                 currentSkin.DrawGlowEffect(g, tileRect, value);
             }
 
-            // »ÒÔÓÎ¸ÁÛÂÏ „‡‰ËÂÌÚ ÂÒÎË ÒÍËÌ ÔÓ‰‰ÂÊË‚‡ÂÚ ÒÔÂˆ˝ÙÙÂÍÚ˚
             Brush backgroundBrush;
             if (currentSkin.HasSpecialEffects && currentSkin.UseGradient)
             {
@@ -633,13 +644,11 @@ namespace _2048
 
             DrawRoundedRectangle(g, tileRect, backgroundBrush, currentSkin.GridColorValue, 2, Math.Max(2, scaledRadius));
 
-            // ›ÙÙÂÍÚ ‰‡„ÓˆÂÌÌÓ„Ó Í‡ÏÌˇ ‰Îˇ ‡ÌËÏËÓ‚‡ÌÌ˚ı ÔÎËÚÓÍ
             if (value >= 128 && currentSkin.Name == "Royal" && width > 20 && height > 20)
             {
                 DrawGemEffect(g, tileRect, value);
             }
 
-            // —ÔÂˆË‡Î¸Ì‡ˇ ‡ÏÍ‡
             if (currentSkin.Name == "Royal" && currentSkin.BorderWidth > 1 && value >= 16)
             {
                 currentSkin.DrawSpecialBorder(g, tileRect, value);
@@ -660,7 +669,6 @@ namespace _2048
                     g.DrawString(value.ToString(), scaledFont, textBrush, tileRect, format);
                 }
 
-                // œ‡ÚËÍÎ˚ Ë ·ÎÂÒÚÍË
                 if (currentSkin.UseParticles && value >= 64)
                 {
                     currentSkin.DrawParticles(g, tileRect, value);
@@ -675,6 +683,234 @@ namespace _2048
             if (currentSkin.HasSpecialEffects && currentSkin.UseGradient)
             {
                 backgroundBrush.Dispose();
+            }
+        }
+
+        private void DrawTipsWindow(Graphics g)
+        {
+            if (!tipsVisible || currentSkin == null) return;
+
+            using (var bgBrush = new SolidBrush(Color.FromArgb(220, 0, 0, 0)))
+            {
+                g.FillRectangle(bgBrush, 0, 0, this.ClientSize.Width, this.ClientSize.Height);
+            }
+
+            DrawRoundedRectangle(g, tipsRect,
+                currentSkin.BackgroundColorValue,
+                currentSkin.GridColorValue,
+                3, 15);
+
+            using (var titleFont = new Font("Arial", 18, FontStyle.Bold))
+            using (var titleBrush = new SolidBrush(currentSkin.TextColorValue))
+            {
+                StringFormat format = new StringFormat();
+                format.Alignment = StringAlignment.Center;
+
+                RectangleF titleRect = new RectangleF(
+                    tipsRect.Left,
+                    tipsRect.Top + 10,
+                    tipsRect.Width,
+                    30
+                );
+
+                string[] tabTitles = { "üéÆ –û—Å–Ω–æ–≤—ã", "üèÜ –°—Ç—Ä–∞—Ç–µ–≥–∏—è", "‚å®Ô∏è –£–ø—Ä–∞–≤–ª–µ–Ω–∏–µ" };
+                g.DrawString(tabTitles[currentTipsTab], titleFont, titleBrush, titleRect, format);
+            }
+
+            DrawTipsTabs(g);
+            DrawTabContent(g);
+            DrawTipsNavigation(g);
+        }
+
+        private void DrawTipsTabs(Graphics g)
+        {
+            int tabWidth = tipsRect.Width / 3;
+            int tabHeight = 30;
+            int tabY = tipsRect.Top + 50;
+
+            string[] tabNames = { "–û—Å–Ω–æ–≤—ã", "–°—Ç—Ä–∞—Ç–µ–≥–∏—è", "–£–ø—Ä–∞–≤–ª–µ–Ω–∏–µ" };
+
+            for (int i = 0; i < 3; i++)
+            {
+                Rectangle tabRect = new Rectangle(
+                    tipsRect.Left + i * tabWidth,
+                    tabY,
+                    tabWidth,
+                    tabHeight
+                );
+
+                Color tabColor = (i == currentTipsTab) ?
+                    currentSkin.GetTileColorValue(16) :
+                    currentSkin.GetTileColorValue(2);
+
+                DrawRoundedRectangle(g, tabRect, tabColor, currentSkin.GridColorValue, 1, 5);
+
+                using (var tabFont = new Font("Arial", 10, i == currentTipsTab ? FontStyle.Bold : FontStyle.Regular))
+                using (var tabBrush = new SolidBrush(currentSkin.GetTextColorForTile(i == currentTipsTab ? 16 : 2)))
+                {
+                    StringFormat format = new StringFormat();
+                    format.Alignment = StringAlignment.Center;
+                    format.LineAlignment = StringAlignment.Center;
+
+                    g.DrawString(tabNames[i], tabFont, tabBrush, tabRect, format);
+                }
+            }
+        }
+
+        private void DrawTabContent(Graphics g)
+        {
+            RectangleF contentRect = new RectangleF(
+                tipsRect.Left + 20,
+                tipsRect.Top + 90,
+                tipsRect.Width - 40,
+                tipsRect.Height - 180
+            );
+
+            string[] contents = {
+                @"üéØ **–¶–µ–ª—å –∏–≥—Ä—ã:**
+–°–æ–∑–¥–∞–π—Ç–µ –ø–ª–∏—Ç–∫—É 2048!
+
+üìã **–ú–µ—Ö–∞–Ω–∏–∫–∞:**
+‚Ä¢ –î–≤–∏–≥–∞–π—Ç–µ –ø–ª–∏—Ç–∫–∏ —Å—Ç—Ä–µ–ª–∫–∞–º–∏
+‚Ä¢ –û–¥–∏–Ω–∞–∫–æ–≤—ã–µ –ø–ª–∏—Ç–∫–∏ —Å–ª–∏–≤–∞—é—Ç—Å—è
+‚Ä¢ –ü–æ—Å–ª–µ —Ö–æ–¥–∞ –Ω–æ–≤–∞—è –ø–ª–∏—Ç–∫–∞
+‚Ä¢ –ò–≥—Ä–∞ –ø—Ä–æ–¥–æ–ª–∂–∞–µ—Ç—Å—è –ø–æ—Å–ª–µ 2048!",
+
+                @"üèÜ **–ö–ª—é—á–µ–≤—ã–µ —Å—Ç—Ä–∞—Ç–µ–≥–∏–∏:**
+
+1. **–£–≥–ª–æ–≤–∞—è —Ç–∞–∫—Ç–∏–∫–∞:**
+   ‚Ä¢ –í—ã–±–µ—Ä–∏—Ç–µ —É–≥–æ–ª
+   ‚Ä¢ –î–µ—Ä–∂–∏—Ç–µ —Ç–∞–º —Å–∞–º—É—é –±–æ–ª—å—à—É—é –ø–ª–∏—Ç–∫—É
+   ‚Ä¢ –°—Ç—Ä–æ–π—Ç–µ –ø–æ—Å–ª–µ–¥–æ–≤–∞—Ç–µ–ª—å–Ω–æ—Å—Ç–∏
+
+2. **–ü–ª–∞–Ω–∏—Ä–æ–≤–∞–Ω–∏–µ:**
+   ‚Ä¢ –î—É–º–∞–π—Ç–µ –Ω–∞ 2-3 —Ö–æ–¥–∞ –≤–ø–µ—Ä–µ–¥
+   ‚Ä¢ –ö–æ–Ω—Ç—Ä–æ–ª–∏—Ä—É–π—Ç–µ –ø–æ—è–≤–ª–µ–Ω–∏–µ –ø–ª–∏—Ç–æ–∫
+   ‚Ä¢ –ò–∑–±–µ–≥–∞–π—Ç–µ —Å–ª—É—á–∞–π–Ω—ã—Ö –¥–≤–∏–∂–µ–Ω–∏–π",
+
+                @"‚å®Ô∏è **–£–ø—Ä–∞–≤–ª–µ–Ω–∏–µ:**
+
+**–û—Å–Ω–æ–≤–Ω—ã–µ –∫–ª–∞–≤–∏—à–∏:**
+‚Ä¢ ‚Üê ‚Üë ‚Üí ‚Üì - –¥–≤–∏–∂–µ–Ω–∏–µ –ø–ª–∏—Ç–æ–∫
+‚Ä¢ R - –Ω–∞—á–∞—Ç—å –Ω–æ–≤—É—é –∏–≥—Ä—É
+‚Ä¢ ESC - –≤—ã—Ö–æ–¥ –≤ –º–µ–Ω—é"
+            };
+
+            using (var contentFont = new Font("Arial", 11))
+            using (var contentBrush = new SolidBrush(currentSkin.TextColorValue))
+            {
+                StringFormat format = new StringFormat();
+                format.Alignment = StringAlignment.Near;
+
+                g.DrawString(contents[currentTipsTab], contentFont, contentBrush, contentRect, format);
+            }
+        }
+
+        private void DrawTipsNavigation(Graphics g)
+        {
+            if (currentTipsTab > 0)
+            {
+                Rectangle backButton = new Rectangle(
+                    tipsRect.Left + 30,
+                    tipsRect.Bottom - 60,
+                    100,
+                    35
+                );
+
+                DrawRoundedRectangle(g, backButton,
+                    currentSkin.GetTileColorValue(4),
+                    currentSkin.GridColorValue,
+                    2, 8);
+
+                using (var btnFont = new Font("Arial", 11, FontStyle.Bold))
+                using (var btnBrush = new SolidBrush(currentSkin.GetTextColorForTile(4)))
+                {
+                    StringFormat format = new StringFormat();
+                    format.Alignment = StringAlignment.Center;
+                    format.LineAlignment = StringAlignment.Center;
+
+                    g.DrawString("‚Üê –ù–∞–∑–∞–¥", btnFont, btnBrush, backButton, format);
+                }
+            }
+
+            string buttonText = (currentTipsTab < 2) ? "–î–∞–ª–µ–µ ‚Üí" : "–ò–≥—Ä–∞—Ç—å!";
+            Rectangle nextButton = new Rectangle(
+                tipsRect.Right - 130,
+                tipsRect.Bottom - 60,
+                100,
+                35
+            );
+
+            DrawRoundedRectangle(g, nextButton,
+                currentSkin.GetTileColorValue(8),
+                currentSkin.GridColorValue,
+                2, 8);
+
+            using (var btnFont = new Font("Arial", 11, FontStyle.Bold))
+            using (var btnBrush = new SolidBrush(currentSkin.GetTextColorForTile(8)))
+            {
+                StringFormat format = new StringFormat();
+                format.Alignment = StringAlignment.Center;
+                format.LineAlignment = StringAlignment.Center;
+
+                g.DrawString(buttonText, btnFont, btnBrush, nextButton, format);
+            }
+
+            if (currentTipsTab == 2)
+            {
+                DrawTipsCheckbox(g);
+            }
+        }
+
+        private void DrawTipsCheckbox(Graphics g)
+        {
+            if (currentTipsTab != 2) return;
+
+            Rectangle checkboxRect = new Rectangle(
+                tipsRect.Left + 30,
+                tipsRect.Bottom - 110,
+                20,
+                20
+            );
+
+            using (var checkboxPen = new Pen(currentSkin.GridColorValue, 2))
+            {
+                g.DrawRectangle(checkboxPen, checkboxRect);
+            }
+
+            if (!showTips)
+            {
+                using (var checkPen = new Pen(currentSkin.GridColorValue, 3))
+                {
+                    g.DrawLine(checkPen, checkboxRect.Left + 3, checkboxRect.Top + 10,
+                              checkboxRect.Left + 8, checkboxRect.Bottom - 3);
+                    g.DrawLine(checkPen, checkboxRect.Left + 8, checkboxRect.Bottom - 3,
+                              checkboxRect.Right - 3, checkboxRect.Top + 3);
+                }
+            }
+
+            using (var textFont = new Font("Arial", 10))
+            using (var textBrush = new SolidBrush(currentSkin.TextColorValue))
+            {
+                g.DrawString("–ë–æ–ª—å—à–µ –Ω–µ –ø–æ–∫–∞–∑—ã–≤–∞—Ç—å –ø–æ–¥—Å–∫–∞–∑–∫–∏", textFont, textBrush,
+                            checkboxRect.Right + 10, checkboxRect.Top - 2);
+            }
+
+            using (var skipFont = new Font("Arial", 9))
+            using (var skipBrush = new SolidBrush(Color.FromArgb(150, currentSkin.TextColorValue)))
+            {
+                Rectangle skipRect = new Rectangle(
+                    tipsRect.Left + (tipsRect.Width - 120) / 2,
+                    tipsRect.Bottom - 80,
+                    120,
+                    20
+                );
+
+                StringFormat format = new StringFormat();
+                format.Alignment = StringAlignment.Center;
+                format.LineAlignment = StringAlignment.Center;
+
+                g.DrawString("–ü—Ä–æ–ø—É—Å—Ç–∏—Ç—å –æ–±—É—á–µ–Ω–∏–µ", skipFont, skipBrush, skipRect, format);
             }
         }
 
@@ -705,7 +941,7 @@ namespace _2048
 
             Rectangle messageRect = new Rectangle(
                 (this.ClientSize.Width - messageWidth) / 2,
-                (this.ClientSize.Height - messageHeight) / 2 + 40, // —‰‚Ë„‡ÂÏ ÒÓÓ·˘ÂÌËÂ ÌÂÏÌÓ„Ó ‚ÌËÁ
+                (this.ClientSize.Height - messageHeight) / 2 + 40,
                 messageWidth,
                 messageHeight
             );
@@ -754,7 +990,7 @@ namespace _2048
 
             Rectangle messageRect = new Rectangle(
                 (this.ClientSize.Width - messageWidth) / 2,
-                (this.ClientSize.Height - messageHeight) / 2 + 40, // —‰‚Ë„‡ÂÏ ÒÓÓ·˘ÂÌËÂ ÌÂÏÌÓ„Ó ‚ÌËÁ
+                (this.ClientSize.Height - messageHeight) / 2 + 40,
                 messageWidth,
                 messageHeight
             );
@@ -791,6 +1027,35 @@ namespace _2048
 
         private void MainForm_KeyDown(object? sender, KeyEventArgs e)
         {
+            if (tipsVisible)
+            {
+                if (e.KeyCode == Keys.Escape || e.KeyCode == Keys.Enter || e.KeyCode == Keys.Space)
+                {
+                    if (currentTipsTab == 2)
+                    {
+                        SaveDontShowTips(!showTips);
+                    }
+                    tipsVisible = false;
+                    this.Invalidate();
+                    this.Focus();
+                    return;
+                }
+
+                if (e.KeyCode == Keys.Left && currentTipsTab > 0)
+                {
+                    currentTipsTab--;
+                    this.Invalidate();
+                    return;
+                }
+
+                if (e.KeyCode == Keys.Right && currentTipsTab < 2)
+                {
+                    currentTipsTab++;
+                    this.Invalidate();
+                    return;
+                }
+            }
+
             if (game == null || animationTimer.Enabled) return;
 
             if (e.KeyCode != Keys.R)
@@ -814,29 +1079,19 @@ namespace _2048
                     game.Move(Direction.Right);
                     break;
                 case Keys.R:
-                    // «‡ÔËÒ˚‚‡ÂÏ ÔÓ·Â‰Û ÂÒÎË ÓÌ‡ ·˚Î‡ ‰ÓÒÚË„ÌÛÚ‡
                     if (game.FirstWinAchieved)
                     {
                         GameStatsManager.RecordWin();
-                        UpdateTheme(); // Œ·ÌÓ‚ÎˇÂÏ Ò˜ÂÚ˜ËÍ ÔÓ·Â‰
+                        UpdateTheme();
                     }
                     game.Restart();
                     showGameOver = false;
                     showWin = false;
                     this.Invalidate();
                     return;
-                case Keys.F:
-                    ToggleFullscreen();
-                    return;
                 case Keys.Escape:
-                    if (isFullscreen)
-                    {
-                        ToggleFullscreen();
-                    }
-                    else
-                    {
-                        this.Close();
-                    }
+                    // –í—ã—Ö–æ–¥ –≤ –≥–ª–∞–≤–Ω–æ–µ –º–µ–Ω—é
+                    ReturnToMainMenu();
                     return;
                 default:
                     return;
@@ -860,10 +1115,153 @@ namespace _2048
             }
         }
 
+        // –ù–æ–≤—ã–π –º–µ—Ç–æ–¥ –¥–ª—è –≤–æ–∑–≤—Ä–∞—Ç–∞ –≤ –≥–ª–∞–≤–Ω–æ–µ –º–µ–Ω—é
+        private void ReturnToMainMenu()
+        {
+            if (startScreenForm != null)
+            {
+                startScreenForm.Show();
+                this.Close();
+            }
+            else
+            {
+                var newStartScreen = new StartScreenForm(settings);
+                newStartScreen.Show();
+                this.Close();
+            }
+        }
+
         protected override void OnMouseDown(MouseEventArgs e)
         {
             base.OnMouseDown(e);
-            this.Focus();
+
+            if (tipsVisible)
+            {
+                HandleTipsClick(e.Location);
+            }
+            else
+            {
+                this.Focus();
+            }
+        }
+
+        private void HandleTipsClick(Point clickPoint)
+        {
+            int tabWidth = tipsRect.Width / 3;
+            int tabY = tipsRect.Top + 50;
+
+            for (int i = 0; i < 3; i++)
+            {
+                Rectangle tabRect = new Rectangle(
+                    tipsRect.Left + i * tabWidth,
+                    tabY,
+                    tabWidth,
+                    30
+                );
+
+                if (tabRect.Contains(clickPoint))
+                {
+                    currentTipsTab = i;
+                    this.Invalidate();
+                    return;
+                }
+            }
+
+            if (currentTipsTab > 0)
+            {
+                Rectangle backButton = new Rectangle(
+                    tipsRect.Left + 30,
+                    tipsRect.Bottom - 60,
+                    100,
+                    35
+                );
+
+                if (backButton.Contains(clickPoint))
+                {
+                    currentTipsTab--;
+                    this.Invalidate();
+                    return;
+                }
+            }
+
+            Rectangle nextButton = new Rectangle(
+                tipsRect.Right - 130,
+                tipsRect.Bottom - 60,
+                100,
+                35
+            );
+
+            if (nextButton.Contains(clickPoint))
+            {
+                if (currentTipsTab < 2)
+                {
+                    currentTipsTab++;
+                }
+                else
+                {
+                    Rectangle checkboxRect = new Rectangle(
+                        tipsRect.Left + 30,
+                        tipsRect.Bottom - 110,
+                        20,
+                        20
+                    );
+
+                    bool dontShow = !showTips;
+                    SaveDontShowTips(dontShow);
+
+                    tipsVisible = false;
+                    this.Focus();
+                }
+                this.Invalidate();
+                return;
+            }
+
+            if (currentTipsTab == 2)
+            {
+                Rectangle checkboxRect = new Rectangle(
+                    tipsRect.Left + 30,
+                    tipsRect.Bottom - 110,
+                    20,
+                    20
+                );
+
+                if (checkboxRect.Contains(clickPoint))
+                {
+                    showTips = !showTips;
+                    this.Invalidate();
+                    return;
+                }
+
+                Rectangle skipRect = new Rectangle(
+                    tipsRect.Left + (tipsRect.Width - 120) / 2,
+                    tipsRect.Bottom - 80,
+                    120,
+                    20
+                );
+
+                if (skipRect.Contains(clickPoint))
+                {
+                    SaveDontShowTips(true);
+                    tipsVisible = false;
+                    this.Focus();
+                    this.Invalidate();
+                }
+            }
+        }
+
+        private void SaveDontShowTips(bool dontShow)
+        {
+            try
+            {
+                settings.ShowTips = !dontShow;
+                SkinSettings.SaveSettings(settings);
+                showTips = !dontShow;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"–û—à–∏–±–∫–∞ —Å–æ—Ö—Ä–∞–Ω–µ–Ω–∏—è –Ω–∞—Å—Ç—Ä–æ–µ–∫: {ex.Message}", "–û—à–∏–±–∫–∞",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
         protected override void OnPreviewKeyDown(PreviewKeyDownEventArgs e)
@@ -874,5 +1272,25 @@ namespace _2048
             }
             base.OnPreviewKeyDown(e);
         }
+
+        // –î–æ–±–∞–≤–ª—è–µ–º –æ–±—Ä–∞–±–æ—Ç—á–∏–∫ WndProc –¥–ª—è –ø–æ–ª–Ω–æ–π –±–ª–æ–∫–∏—Ä–æ–≤–∫–∏ —Ä–µ—Å–∞–π–∑–∞
+        protected override void WndProc(ref Message m)
+        {
+            const int WM_SYSCOMMAND = 0x0112;
+            const int SC_MAXIMIZE = 0xF030;
+            const int SC_SIZE = 0xF000;
+
+            if (m.Msg == WM_SYSCOMMAND)
+            {
+                int command = m.WParam.ToInt32() & 0xFFF0;
+                if (command == SC_MAXIMIZE || command == SC_SIZE)
+                {
+                    return; // –ë–ª–æ–∫–∏—Ä—É–µ–º –º–∞–∫—Å–∏–º–∏–∑–∞—Ü–∏—é –∏ –∏–∑–º–µ–Ω–µ–Ω–∏–µ —Ä–∞–∑–º–µ—Ä–∞
+                }
+            }
+
+            base.WndProc(ref m);
+        }
+
     }
 }
