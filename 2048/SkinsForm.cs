@@ -1,302 +1,294 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Drawing;
-using System.Linq;
 using System.Windows.Forms;
 
 namespace _2048
 {
-    public class SkinsForm : Form
+    public partial class SkinsForm : Form
     {
-        private SkinSettings currentSettings;
-        private SkinSettings originalSettings;
-        private FlowLayoutPanel skinsPanel;
-        private TrackBar speedTrackBar;
-        private CheckBox tipsCheckbox;
-        private Button saveButton;
-        private Button cancelButton;
-        private Label speedValueLabel;
+        private SkinSettings settings;
+        private bool isEnglish;
 
-        public SkinsForm(SkinSettings settings)
+        private Button classicButton;
+        private Button darkButton;
+        private Button oceanButton;
+        private Button forestButton;
+        private Button royalButton;
+        private Button closeButton;
+
+        private Label titleLabel;
+        private Label animationSpeedLabel;
+        private TrackBar animationSpeedTrackBar;
+
+        public SkinsForm(SkinSettings settings, bool englishMode = false)
         {
-            this.originalSettings = settings;
-            this.currentSettings = settings.Clone();
-
-            // Полностью блокируем изменение размера окна
-            this.FormBorderStyle = FormBorderStyle.FixedSingle;
-            this.MaximizeBox = false;
-            this.MinimizeBox = false;
-            this.SizeGripStyle = SizeGripStyle.Hide;
+            this.settings = settings;
+            this.isEnglish = englishMode;
 
             InitializeComponent();
-
-            // Фиксируем размер окна
-            this.ClientSize = new Size(500, 550);
-            this.MinimumSize = this.Size;
-            this.MaximumSize = this.Size;
-
-            LoadSkins();
-            UpdateControls();
+            InitializeUI();
+            UpdateSelectedSkin();
+            UpdateLanguage();
         }
 
         private void InitializeComponent()
         {
-            this.SuspendLayout();
-
-            this.ClientSize = new Size(500, 500);
-            this.Text = "2048 - Skins";
-            this.StartPosition = FormStartPosition.CenterScreen;
-            this.FormBorderStyle = FormBorderStyle.FixedDialog;
+            // Полностью блокируем изменение размера окна
+            this.FormBorderStyle = FormBorderStyle.FixedSingle;
             this.MaximizeBox = false;
+            this.MinimizeBox = false;
+            this.ControlBox = true;
+            this.SizeGripStyle = SizeGripStyle.Hide;
 
-            // Панель скинов
-            skinsPanel = new FlowLayoutPanel();
-            skinsPanel.Location = new Point(20, 20);
-            skinsPanel.Size = new Size(460, 300);
-            skinsPanel.AutoScroll = true;
-            this.Controls.Add(skinsPanel);
-
-            // Скорость анимации
-            var speedLabel = new Label();
-            speedLabel.Text = "Animation Speed:";
-            speedLabel.Location = new Point(20, 340);
-            speedLabel.Size = new Size(150, 25);
-            this.Controls.Add(speedLabel);
-
-            speedTrackBar = new TrackBar();
-            speedTrackBar.Location = new Point(170, 340);
-            speedTrackBar.Size = new Size(200, 45);
-            speedTrackBar.Minimum = 1;
-            speedTrackBar.Maximum = 20;
-            speedTrackBar.ValueChanged += SpeedTrackBar_ValueChanged;
-            this.Controls.Add(speedTrackBar);
-
-            speedValueLabel = new Label();
-            speedValueLabel.Location = new Point(380, 340);
-            speedValueLabel.Size = new Size(50, 25);
-            this.Controls.Add(speedValueLabel);
-
-            // Кнопки
-            saveButton = new Button();
-            saveButton.Text = "Apply";
-            saveButton.Size = new Size(100, 35);
-            saveButton.Location = new Point(280, 400);
-            saveButton.Click += SaveButton_Click;
-            this.Controls.Add(saveButton);
-
-            cancelButton = new Button();
-            cancelButton.Text = "Cancel";
-            cancelButton.Size = new Size(100, 35);
-            cancelButton.Location = new Point(170, 400);
-            cancelButton.Click += CancelButton_Click;
-            this.Controls.Add(cancelButton);
-
-            this.ResumeLayout(false);
-            ApplyCurrentSkin();
+            this.ClientSize = new Size(500, 550);
+            this.MinimumSize = this.Size;
+            this.MaximumSize = this.Size;
+            this.Text = isEnglish ? "Skins Selection" : "Выбор скинов";
+            this.StartPosition = FormStartPosition.CenterScreen;
+            this.DoubleBuffered = true;
         }
 
-        private void LoadSkins()
+        private void InitializeUI()
         {
-            skinsPanel.Controls.Clear();
-            var skins = SkinSettings.GetAvailableSkins();
+            // Title label
+            titleLabel = new Label();
+            titleLabel.Text = isEnglish ? "Select Skin" : "Выберите скин";
+            titleLabel.Font = new Font("Segoe UI", 24, FontStyle.Bold);
+            titleLabel.AutoSize = false;
+            titleLabel.Size = new Size(400, 40);
+            titleLabel.Location = new Point(50, 20);
+            titleLabel.TextAlign = ContentAlignment.MiddleCenter;
+            titleLabel.TabStop = false;
+            this.Controls.Add(titleLabel);
 
-            foreach (var skinName in skins)
-            {
-                var skin = SkinSettings.GetSkin(skinName);
-                var skinControl = CreateSkinControl(skin);
-                skinsPanel.Controls.Add(skinControl);
-            }
+            // Classic skin button
+            classicButton = CreateSkinButton("Classic", 0);
+            classicButton.Location = new Point(50, 80);
+            classicButton.Click += ClassicButton_Click;
+            this.Controls.Add(classicButton);
+
+            // Dark skin button
+            darkButton = CreateSkinButton("Dark", 1);
+            darkButton.Location = new Point(50, 140);
+            darkButton.Click += DarkButton_Click;
+            this.Controls.Add(darkButton);
+
+            // Ocean skin button
+            oceanButton = CreateSkinButton("Ocean", 2);
+            oceanButton.Location = new Point(50, 200);
+            oceanButton.Click += OceanButton_Click;
+            this.Controls.Add(oceanButton);
+
+            // Forest skin button
+            forestButton = CreateSkinButton("Forest", 3);
+            forestButton.Location = new Point(50, 260);
+            forestButton.Click += ForestButton_Click;
+            this.Controls.Add(forestButton);
+
+            // Royal skin button
+            royalButton = CreateSkinButton("Royal", 4);
+            royalButton.Location = new Point(50, 320);
+            royalButton.Click += RoyalButton_Click;
+            this.Controls.Add(royalButton);
+
+            // Animation speed label
+            animationSpeedLabel = new Label();
+            animationSpeedLabel.Text = isEnglish ? "Animation Speed:" : "Скорость анимации:";
+            animationSpeedLabel.Font = new Font("Segoe UI", 12);
+            animationSpeedLabel.AutoSize = true;
+            animationSpeedLabel.Location = new Point(50, 390);
+            animationSpeedLabel.TabStop = false;
+            this.Controls.Add(animationSpeedLabel);
+
+            // Animation speed trackbar
+            animationSpeedTrackBar = new TrackBar();
+            animationSpeedTrackBar.Minimum = 1;
+            animationSpeedTrackBar.Maximum = 20;
+            animationSpeedTrackBar.Value = settings.AnimationSpeed;
+            animationSpeedTrackBar.Width = 400;
+            animationSpeedTrackBar.Location = new Point(50, 420);
+            animationSpeedTrackBar.TickFrequency = 1;
+            animationSpeedTrackBar.ValueChanged += AnimationSpeedTrackBar_ValueChanged;
+            this.Controls.Add(animationSpeedTrackBar);
+
+            // Close button
+            closeButton = new Button();
+            closeButton.Text = isEnglish ? "Close" : "Закрыть";
+            closeButton.Font = new Font("Segoe UI", 14, FontStyle.Bold);
+            closeButton.Size = new Size(200, 40);
+            closeButton.Location = new Point(150, 480);
+            closeButton.FlatStyle = FlatStyle.Flat;
+            closeButton.Click += CloseButton_Click;
+            this.Controls.Add(closeButton);
+
+            UpdateTheme();
         }
 
-        private Control CreateSkinControl(Skin skin)
+        private Button CreateSkinButton(string skinName, int index)
         {
-            var panel = new Panel();
-            panel.Size = new Size(200, 100);
-            panel.Margin = new Padding(5);
-            panel.BorderStyle = BorderStyle.FixedSingle;
-            panel.Cursor = Cursors.Hand;
-            panel.Tag = skin.Name;
+            var button = new Button();
+            button.Text = skinName;
+            button.Font = new Font("Segoe UI", 14, FontStyle.Bold);
+            button.Size = new Size(400, 50);
+            button.FlatStyle = FlatStyle.Flat;
+            button.Tag = index;
+            return button;
+        }
 
-            // Проверяем, разблокирован ли скин
-            bool isLocked = !SkinSettings.IsSkinUnlocked(skin.Name);
+        private void UpdateTheme()
+        {
+            Skin currentSkin = SkinSettings.GetSkin(settings.CurrentSkin);
 
-            // Превью цветов плиток - используем оригинальные цвета скина
-            var previewPanel = new FlowLayoutPanel();
-            previewPanel.Location = new Point(10, 10);
-            previewPanel.Size = new Size(120, 40);
-            previewPanel.Margin = new Padding(0);
+            this.BackColor = currentSkin.BackgroundColorValue;
+            titleLabel.ForeColor = currentSkin.TextColorValue;
+            animationSpeedLabel.ForeColor = currentSkin.TextColorValue;
 
-            if (!isLocked)
+            // Get current skin index
+            int currentSkinIndex = GetSkinIndex(settings.CurrentSkin);
+
+            UpdateButtonColors(classicButton, currentSkin, 0, currentSkinIndex);
+            UpdateButtonColors(darkButton, currentSkin, 1, currentSkinIndex);
+            UpdateButtonColors(oceanButton, currentSkin, 2, currentSkinIndex);
+            UpdateButtonColors(forestButton, currentSkin, 3, currentSkinIndex);
+            UpdateButtonColors(royalButton, currentSkin, 4, currentSkinIndex);
+            UpdateCloseButtonColors(closeButton, currentSkin);
+        }
+
+        private void UpdateButtonColors(Button button, Skin skin, int skinIndex, int currentSkinIndex)
+        {
+            bool isSelected = skinIndex == currentSkinIndex;
+            int value = isSelected ? 16 : 2;
+
+            button.BackColor = skin.GetTileColorValue(value);
+            button.ForeColor = skin.GetTextColorForTile(value);
+            button.FlatAppearance.BorderColor = skin.GridColorValue;
+            button.FlatAppearance.BorderSize = isSelected ? 3 : 1;
+            button.FlatAppearance.MouseOverBackColor = skin.GetTileColorValue(isSelected ? 32 : 4);
+            button.FlatAppearance.MouseDownBackColor = skin.GetTileColorValue(isSelected ? 64 : 8);
+        }
+
+        private void UpdateCloseButtonColors(Button button, Skin skin)
+        {
+            button.BackColor = skin.GetTileColorValue(8);
+            button.ForeColor = skin.GetTextColorForTile(8);
+            button.FlatAppearance.BorderColor = skin.GridColorValue;
+            button.FlatAppearance.MouseOverBackColor = skin.GetTileColorValue(16);
+            button.FlatAppearance.MouseDownBackColor = skin.GetTileColorValue(32);
+        }
+
+        private void UpdateSelectedSkin()
+        {
+            // Check if Royal skin is unlocked
+            if (!IsSkinUnlocked("Royal"))
             {
-                // Добавляем несколько плиток для превью с оригинальными цветами
-                int[] previewValues = { 2, 4, 8, 128 };
-                foreach (var value in previewValues)
-                {
-                    var tilePanel = new Panel();
-                    tilePanel.Size = new Size(25, 25);
-                    tilePanel.Margin = new Padding(2);
-                    tilePanel.BackColor = skin.GetTileColorValue(value);
-                    previewPanel.Controls.Add(tilePanel);
-                }
+                royalButton.Enabled = false;
+                royalButton.Text = isEnglish ? "Royal (Locked)" : "Royal (Заблокирован)";
+                royalButton.ForeColor = Color.Gray;
             }
             else
             {
-                // Показываем замок для заблокированного скина
-                var lockLabel = new Label();
-                lockLabel.Text = "🔒";
-                lockLabel.Font = new Font("Arial", 16);
-                lockLabel.Size = new Size(40, 40);
-                lockLabel.TextAlign = ContentAlignment.MiddleCenter;
-                previewPanel.Controls.Add(lockLabel);
+                royalButton.Enabled = true;
+                royalButton.Text = isEnglish ? "Royal" : "Королевский";
             }
+        }
 
-            // Название скина
-            var nameLabel = new Label();
-            nameLabel.Text = skin.Name;
-            nameLabel.Location = new Point(140, 15);
-            nameLabel.Size = new Size(50, 20);
-            nameLabel.TextAlign = ContentAlignment.MiddleLeft;
-
-            // Информация о разблокировке
-            var unlockLabel = new Label();
-            unlockLabel.Location = new Point(10, 55);
-            unlockLabel.Size = new Size(180, 30);
-            unlockLabel.TextAlign = ContentAlignment.MiddleCenter;
-            unlockLabel.Font = new Font("Arial", 8);
-
-            if (isLocked)
+        private void UpdateLanguage()
+        {
+            if (isEnglish)
             {
-                unlockLabel.Text = "Win 1 game to unlock";
-                unlockLabel.ForeColor = Color.Gray;
-                panel.Cursor = Cursors.No;
-                panel.BackColor = Color.LightGray;
+                this.Text = "Skins Selection";
+                titleLabel.Text = "Select Skin";
+                classicButton.Text = "Classic";
+                darkButton.Text = "Dark";
+                oceanButton.Text = "Ocean";
+                forestButton.Text = "Forest";
+                animationSpeedLabel.Text = "Animation Speed:";
+                closeButton.Text = "Close";
             }
             else
             {
-                unlockLabel.Text = "✓ Unlocked";
-                unlockLabel.ForeColor = Color.Green;
+                this.Text = "Выбор скинов";
+                titleLabel.Text = "Выберите скин";
+                classicButton.Text = "Классический";
+                darkButton.Text = "Темный";
+                oceanButton.Text = "Океан";
+                forestButton.Text = "Лес";
+                animationSpeedLabel.Text = "Скорость анимации:";
+                closeButton.Text = "Закрыть";
             }
 
-            panel.Controls.Add(previewPanel);
-            panel.Controls.Add(nameLabel);
-            panel.Controls.Add(unlockLabel);
+            UpdateSelectedSkin();
+            UpdateTheme();
+        }
 
-            if (!isLocked)
+        private void ClassicButton_Click(object? sender, EventArgs e)
+        {
+            settings.CurrentSkin = "Classic";
+            UpdateTheme();
+        }
+
+        private void DarkButton_Click(object? sender, EventArgs e)
+        {
+            settings.CurrentSkin = "Dark";
+            UpdateTheme();
+        }
+
+        private void OceanButton_Click(object? sender, EventArgs e)
+        {
+            settings.CurrentSkin = "Ocean";
+            UpdateTheme();
+        }
+
+        private void ForestButton_Click(object? sender, EventArgs e)
+        {
+            settings.CurrentSkin = "Forest";
+            UpdateTheme();
+        }
+
+        private void RoyalButton_Click(object? sender, EventArgs e)
+        {
+            if (IsSkinUnlocked("Royal"))
             {
-                panel.Click += SkinControl_Click;
-                previewPanel.Click += SkinControl_Click;
-                nameLabel.Click += SkinControl_Click;
-                unlockLabel.Click += SkinControl_Click;
-            }
-
-            // Подсветка выбранного скина
-            if (skin.Name == currentSettings.CurrentSkin && !isLocked)
-            {
-                panel.BorderStyle = BorderStyle.Fixed3D;
-                panel.BackColor = Color.FromArgb(50, Color.Yellow);
-            }
-
-            return panel;
-        }
-
-        private void SkinControl_Click(object? sender, EventArgs e)
-        {
-            Control? control = sender as Control;
-            if (control != null)
-            {
-                // Находим родительскую панель скина
-                Panel? skinPanel = control as Panel;
-                if (skinPanel == null)
-                {
-                    skinPanel = control.Parent as Panel;
-                }
-
-                if (skinPanel != null && skinPanel.Tag is string skinName)
-                {
-                    SelectSkin(skinName);
-                }
+                settings.CurrentSkin = "Royal";
+                UpdateTheme();
             }
         }
 
-        private void SelectSkin(string skinName)
+        private void AnimationSpeedTrackBar_ValueChanged(object? sender, EventArgs e)
         {
-            // Проверяем, не пытаются ли выбрать заблокированный королевский скин
-            if (!SkinSettings.IsSkinUnlocked(skinName))
-            {
-                MessageBox.Show("Win at least one game to unlock the Royal skin!", "Skin Locked",
-                    MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
-            }
-
-            currentSettings.CurrentSkin = skinName;
-            LoadSkins(); // Перезагружаем для обновления выделения
-            ApplyCurrentSkin();
+            settings.AnimationSpeed = animationSpeedTrackBar.Value;
         }
 
-        private void ApplyCurrentSkin()
+        private void CloseButton_Click(object? sender, EventArgs e)
         {
-            var skin = SkinSettings.GetSkin(currentSettings.CurrentSkin);
-            this.BackColor = skin.BackgroundColorValue;
-
-            // Обновляем только основные элементы формы, но не превью скинов
-            foreach (Control control in this.Controls)
-            {
-                // Пропускаем панель скинов и её дочерние элементы
-                if (control == skinsPanel || control.Parent == skinsPanel)
-                    continue;
-
-                if (control is Label label)
-                {
-                    label.ForeColor = skin.TextColorValue;
-                    label.BackColor = skin.BackgroundColorValue;
-                }
-
-                if (control is Button button)
-                {
-                    button.BackColor = skin.GetTileColorValue(2);
-                    button.ForeColor = skin.GetTextColorForTile(2);
-                    button.FlatStyle = FlatStyle.Flat;
-                }
-            }
-        }
-
-        private void UpdateControls()
-        {
-            speedTrackBar.Value = currentSettings.AnimationSpeed;
-            UpdateSpeedLabel();
-        }
-
-        private void UpdateSpeedLabel()
-        {
-            speedValueLabel.Text = currentSettings.AnimationSpeed.ToString();
-        }
-
-        private void SpeedTrackBar_ValueChanged(object? sender, EventArgs e)
-        {
-            currentSettings.AnimationSpeed = speedTrackBar.Value;
-            UpdateSpeedLabel();
-        }
-
-        private void SaveButton_Click(object? sender, EventArgs e)
-        {
-            // Сохраняем настройки
-            SkinSettings.SaveSettings(currentSettings);
-
-            // Копируем настройки обратно в оригинальный объект
-            originalSettings.CurrentSkin = currentSettings.CurrentSkin;
-            originalSettings.AnimationSpeed = currentSettings.AnimationSpeed;
-            originalSettings.DarkTheme = currentSettings.DarkTheme;
-            originalSettings.TotalWins = currentSettings.TotalWins;
-
-            this.DialogResult = DialogResult.OK;
+            SkinSettings.SaveSettings(settings);
             this.Close();
         }
 
-        private void CancelButton_Click(object? sender, EventArgs e)
+        // Вспомогательные методы для работы со скинами
+        private bool IsSkinUnlocked(string skinName)
         {
-            this.DialogResult = DialogResult.Cancel;
-            this.Close();
+            if (skinName == "Royal")
+            {
+                return settings.TotalWins > 0;
+            }
+            return true; // Все остальные скины разблокированы по умолчанию
         }
+
+        private int GetSkinIndex(string skinName)
+        {
+            return skinName switch
+            {
+                "Classic" => 0,
+                "Dark" => 1,
+                "Ocean" => 2,
+                "Forest" => 3,
+                "Royal" => 4,
+                _ => 0
+            };
+        }
+
+        // Блокируем изменение размера окна
         protected override void WndProc(ref Message m)
         {
             const int WM_SYSCOMMAND = 0x0112;

@@ -4,148 +4,203 @@ using System.Windows.Forms;
 
 namespace _2048
 {
-    public class StartScreenForm : Form
+    public partial class StartScreenForm : Form
     {
         private Button startButton;
-        private Button rulesButton;
         private Button skinsButton;
         private Button exitButton;
+        private Button languageButton;
         private Label titleLabel;
-        private Label winsLabel;
+        private Label versionLabel;
+
         private SkinSettings settings;
+
+        // Система перевода
+        private bool isEnglish = false;
 
         public StartScreenForm(SkinSettings settings)
         {
             this.settings = settings;
 
-            // Полностью блокируем изменение размера окна
-            this.FormBorderStyle = FormBorderStyle.FixedSingle;
-            this.MaximizeBox = false;
-            this.MinimizeBox = false;
-            this.SizeGripStyle = SizeGripStyle.Hide;
-
             InitializeComponent();
-
-            // Фиксируем размер окна
-            this.ClientSize = new Size(400, 500);
-            this.MinimumSize = this.Size;
-            this.MaximumSize = this.Size;
-
-            ApplySkin();
+            InitializeUI();
+            UpdateTheme();
+            UpdateLanguage();
         }
 
         private void InitializeComponent()
         {
-            this.SuspendLayout();
-
-            this.ClientSize = new Size(400, 500);
-            this.Text = "2048 - Main Menu";
-            this.StartPosition = FormStartPosition.CenterScreen;
-            this.FormBorderStyle = FormBorderStyle.FixedDialog;
+            // Полностью блокируем изменение размера окна
+            this.FormBorderStyle = FormBorderStyle.FixedSingle;
             this.MaximizeBox = false;
             this.MinimizeBox = false;
+            this.ControlBox = true;
+            this.SizeGripStyle = SizeGripStyle.Hide;
 
-            // Заголовок
+            this.ClientSize = new Size(400, 450);
+            this.MinimumSize = this.Size;
+            this.MaximumSize = this.Size;
+            this.Text = "2048 - Главное меню";
+            this.StartPosition = FormStartPosition.CenterScreen;
+            this.DoubleBuffered = true;
+        }
+
+        private void InitializeUI()
+        {
+            // Title label
             titleLabel = new Label();
-                titleLabel.Text = "2048";
-                titleLabel.Font = new Font("Arial", 36, FontStyle.Bold);
-                titleLabel.Size = new Size(200, 60);
-                titleLabel.Location = new Point(100, 60);
-                titleLabel.TextAlign = ContentAlignment.MiddleCenter;
-                this.Controls.Add(titleLabel);
+            titleLabel.Text = "2048";
+            titleLabel.Font = new Font("Segoe UI", 48, FontStyle.Bold);
+            titleLabel.AutoSize = false;
+            titleLabel.Size = new Size(300, 80);
+            titleLabel.Location = new Point(50, 50);
+            titleLabel.TextAlign = ContentAlignment.MiddleCenter;
+            titleLabel.TabStop = false;
+            this.Controls.Add(titleLabel);
 
-                // Счётчик побед
-                winsLabel = new Label();
-                winsLabel.Text = $"Total Wins: {GameStatsManager.GetTotalWins()}";
-                winsLabel.Font = new Font("Arial", 12, FontStyle.Bold);
-                winsLabel.Size = new Size(200, 25);
-                winsLabel.Location = new Point(100, 130);
-                winsLabel.TextAlign = ContentAlignment.MiddleCenter;
-                this.Controls.Add(winsLabel);
+            // Version label
+            versionLabel = new Label();
+            versionLabel.Text = "v1.0";
+            versionLabel.Font = new Font("Segoe UI", 10, FontStyle.Italic);
+            versionLabel.AutoSize = true;
+            versionLabel.Location = new Point(180, 130);
+            versionLabel.TextAlign = ContentAlignment.MiddleCenter;
+            versionLabel.TabStop = false;
+            this.Controls.Add(versionLabel);
 
-                // Кнопка начала игры
-                startButton = new Button();
-                startButton.Text = "Start Game";
-                startButton.Size = new Size(200, 50);
-                startButton.Location = new Point(100, 180);
-                startButton.Font = new Font("Arial", 14, FontStyle.Bold);
-                startButton.Click += StartButton_Click;
-                this.Controls.Add(startButton);
+            // Start button
+            startButton = new Button();
+            startButton.Text = "Начать игру";
+            startButton.Font = new Font("Segoe UI", 14, FontStyle.Bold);
+            startButton.Size = new Size(250, 50);
+            startButton.Location = new Point(75, 180);
+            startButton.FlatStyle = FlatStyle.Flat;
+            startButton.Click += StartButton_Click;
+            this.Controls.Add(startButton);
 
-                // Кнопка скинов
-                skinsButton = new Button();
-                skinsButton.Text = "Skins";
-                skinsButton.Size = new Size(200, 50);
-                skinsButton.Location = new Point(100, 250);
-                skinsButton.Font = new Font("Arial", 14);
-                skinsButton.Click += SkinsButton_Click;
-                this.Controls.Add(skinsButton);
+            // Skins button
+            skinsButton = new Button();
+            skinsButton.Text = "Скины";
+            skinsButton.Font = new Font("Segoe UI", 14, FontStyle.Bold);
+            skinsButton.Size = new Size(250, 50);
+            skinsButton.Location = new Point(75, 240);
+            skinsButton.FlatStyle = FlatStyle.Flat;
+            skinsButton.Click += SkinsButton_Click;
+            this.Controls.Add(skinsButton);
 
-            // Кнопка выхода
+            // Language button
+            languageButton = new Button();
+            languageButton.Text = "EN";
+            languageButton.Font = new Font("Segoe UI", 12, FontStyle.Bold);
+            languageButton.Size = new Size(60, 35);
+            languageButton.Location = new Point(320, 20);
+            languageButton.FlatStyle = FlatStyle.Flat;
+            languageButton.Click += LanguageButton_Click;
+            languageButton.BackColor = Color.Transparent;
+            this.Controls.Add(languageButton);
+
+            // Exit button
             exitButton = new Button();
-            exitButton.Text = "Exit";
-            exitButton.Size = new Size(200, 50);
-            exitButton.Location = new Point(100, 320);
-            exitButton.Font = new Font("Arial", 14);
+            exitButton.Text = "Выход";
+            exitButton.Font = new Font("Segoe UI", 14, FontStyle.Bold);
+            exitButton.Size = new Size(250, 50);
+            exitButton.Location = new Point(75, 300);
+            exitButton.FlatStyle = FlatStyle.Flat;
             exitButton.Click += ExitButton_Click;
             this.Controls.Add(exitButton);
-
-            this.ResumeLayout(false);
         }
 
-        private void ApplySkin()
+        private void UpdateTheme()
         {
-            var skin = SkinSettings.GetSkin(settings.CurrentSkin);
+            Skin currentSkin = SkinSettings.GetSkin(settings.CurrentSkin);
 
-            this.BackColor = skin.BackgroundColorValue;
-            titleLabel.ForeColor = skin.TextColorValue;
-            winsLabel.ForeColor = skin.TextColorValue;
-            winsLabel.BackColor = skin.BackgroundColorValue;
+            // Apply colors from current skin
+            this.BackColor = currentSkin.BackgroundColorValue;
+            titleLabel.ForeColor = currentSkin.TextColorValue;
+            versionLabel.ForeColor = currentSkin.TextColorValue;
 
-            // Обновляем текст счётчика побед
-            winsLabel.Text = $"Total Wins: {GameStatsManager.GetTotalWins()}";
-
-            ApplyButtonSkin(startButton, skin);
-            ApplyButtonSkin(skinsButton, skin);
-            ApplyButtonSkin(exitButton, skin);
+            // Update button colors
+            UpdateButtonColors(startButton, currentSkin);
+            UpdateButtonColors(skinsButton, currentSkin);
+            UpdateButtonColors(exitButton, currentSkin);
+            UpdateLanguageButtonColor(languageButton, currentSkin);
         }
 
-        private void ApplyButtonSkin(Button button, Skin skin)
+        private void UpdateButtonColors(Button button, Skin skin)
         {
             button.BackColor = skin.GetTileColorValue(2);
             button.ForeColor = skin.GetTextColorForTile(2);
-            button.FlatStyle = FlatStyle.Flat;
             button.FlatAppearance.BorderColor = skin.GridColorValue;
-            button.FlatAppearance.BorderSize = 2;
+            button.FlatAppearance.MouseOverBackColor = skin.GetTileColorValue(4);
+            button.FlatAppearance.MouseDownBackColor = skin.GetTileColorValue(8);
+        }
+
+        private void UpdateLanguageButtonColor(Button button, Skin skin)
+        {
+            button.BackColor = skin.GetTileColorValue(16);
+            button.ForeColor = skin.GetTextColorForTile(16);
+            button.FlatAppearance.BorderColor = skin.GridColorValue;
+            button.FlatAppearance.MouseOverBackColor = skin.GetTileColorValue(32);
+            button.FlatAppearance.MouseDownBackColor = skin.GetTileColorValue(64);
         }
 
         private void StartButton_Click(object? sender, EventArgs e)
         {
-            this.Hide();
-            var gameForm = new MainForm(settings);
-            gameForm.FormClosed += (s, args) => this.Close();
+            MainForm gameForm = new MainForm(settings, this, isEnglish);
             gameForm.Show();
+            this.Hide();
         }
 
         private void SkinsButton_Click(object? sender, EventArgs e)
         {
-            var skinsForm = new SkinsForm(settings);
-            if (skinsForm.ShowDialog() == DialogResult.OK)
-            {
-                // Обновляем настройки из БД
-                var newSettings = SkinSettings.LoadSettings();
-                settings.CurrentSkin = newSettings.CurrentSkin;
-                settings.AnimationSpeed = newSettings.AnimationSpeed;
-                settings.TotalWins = newSettings.TotalWins;
+            SkinsForm skinsForm = new SkinsForm(settings, isEnglish);
+            skinsForm.ShowDialog();
 
-                ApplySkin(); // Обновляем скин после закрытия окна
+            // Reload theme if skin changed
+            UpdateTheme();
+        }
+
+        private void LanguageButton_Click(object? sender, EventArgs e)
+        {
+            // Переключаем язык
+            isEnglish = !isEnglish;
+            UpdateLanguage();
+        }
+
+        private void UpdateLanguage()
+        {
+            if (isEnglish)
+            {
+                // Английский язык
+                this.Text = "2048 - Main Menu";
+                titleLabel.Text = "2048";
+                startButton.Text = "Start Game";
+                skinsButton.Text = "Skins";
+                exitButton.Text = "Exit";
+                languageButton.Text = "RU";
             }
+            else
+            {
+                // Русский язык
+                this.Text = "2048 - Главное меню";
+                titleLabel.Text = "2048";
+                startButton.Text = "Начать игру";
+                skinsButton.Text = "Скины";
+                exitButton.Text = "Выход";
+                languageButton.Text = "EN";
+            }
+
+            // Обновляем тему для применения цветов
+            Skin currentSkin = SkinSettings.GetSkin(settings.CurrentSkin);
+            UpdateTheme();
         }
 
         private void ExitButton_Click(object? sender, EventArgs e)
         {
             Application.Exit();
         }
+
+        // Блокируем изменение размера окна
         protected override void WndProc(ref Message m)
         {
             const int WM_SYSCOMMAND = 0x0112;

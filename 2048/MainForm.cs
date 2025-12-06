@@ -15,6 +15,7 @@ namespace _2048
         private Label scoreLabel;
         private Label winsLabel;
         private Label instructionsLabel;
+        private Button languageButton;
         private System.Windows.Forms.Timer animationTimer;
         private float animationSpeed = 0.10f;
 
@@ -32,23 +33,25 @@ namespace _2048
         private Rectangle tipsRect;
         private int currentTipsTab = 0;
 
-        // Исправлено: удалена дублирующаяся константа VerticalOffset
-        private const int VerticalOffset = 50; // Оставляем только одну
-
         // Ссылка на главную форму для возврата
         private Form? startScreenForm;
 
-        public MainForm(SkinSettings settings, Form? startScreenForm = null)
+        // Система перевода
+        private bool isEnglish = false;
+        private const int VerticalOffset = 50;
+
+        public MainForm(SkinSettings settings, Form? startScreenForm = null, bool englishMode = false)
         {
             this.settings = settings;
             this.startScreenForm = startScreenForm;
+            this.isEnglish = englishMode;
 
             // Полностью блокируем изменение размера окна
             this.FormBorderStyle = FormBorderStyle.FixedSingle;
             this.MaximizeBox = false;
             this.MinimizeBox = false;
             this.ControlBox = true;
-            this.SizeGripStyle = SizeGripStyle.Hide; // Скрываем ручку изменения размера
+            this.SizeGripStyle = SizeGripStyle.Hide;
 
             InitializeComponent();
 
@@ -60,8 +63,10 @@ namespace _2048
             InitializeGameComponents();
         }
 
+        // Метод для показа подсказок (оставляем, но убираем вызов из меню)
         public void ShowTipsFromMenu()
         {
+            // Этот метод больше не вызывается из меню, но оставляем на случай если понадобится
             tipsVisible = true;
             showTips = true;
             currentTipsTab = 0;
@@ -90,11 +95,7 @@ namespace _2048
             this.KeyPreview = true;
             this.KeyDown += MainForm_KeyDown;
 
-            // УБИРАЕМ обработчики ресайза - они больше не нужны
-            // this.Resize -= MainForm_Resize;
-            // this.SizeChanged -= MainForm_SizeChanged;
-
-            this.Text = "2048 Game";
+            this.Text = isEnglish ? "2048 Game" : "Игра 2048";
             this.Focus();
             this.DoubleBuffered = true;
         }
@@ -112,8 +113,8 @@ namespace _2048
             scoreLabel = new Label();
             scoreLabel.Location = new Point(gridPadding, gridPadding);
             scoreLabel.Size = new Size(200, 30);
-            scoreLabel.Font = new Font("Arial", 14, FontStyle.Bold);
-            scoreLabel.Text = "Score: 0";
+            scoreLabel.Font = new Font("Segoe UI", 14, FontStyle.Bold);
+            scoreLabel.Text = isEnglish ? "Score: 0" : "Счет: 0";
             scoreLabel.TabStop = false;
             this.Controls.Add(scoreLabel);
 
@@ -121,19 +122,32 @@ namespace _2048
             winsLabel = new Label();
             winsLabel.Location = new Point(gridPadding, gridPadding + 35);
             winsLabel.Size = new Size(200, 25);
-            winsLabel.Font = new Font("Arial", 10, FontStyle.Bold);
-            winsLabel.Text = $"Wins: {settings.TotalWins}";
+            winsLabel.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+            winsLabel.Text = isEnglish ? $"Wins: {settings.TotalWins}" : $"Победы: {settings.TotalWins}";
             winsLabel.TabStop = false;
             this.Controls.Add(winsLabel);
 
-            // Instructions label - обновляем текст
+            // Instructions label
             instructionsLabel = new Label();
             instructionsLabel.Location = new Point(gridPadding, 700);
             instructionsLabel.Size = new Size(570, 80);
-            instructionsLabel.Font = new Font("Arial", 10);
-            instructionsLabel.Text = "Управление:\r\nСтрелки - движение плиток\r\nR - начать заново\r\nESC - выход в меню";
+            instructionsLabel.Font = new Font("Segoe UI", 10);
+            instructionsLabel.Text = isEnglish ?
+                "Controls:\r\nArrows - move tiles\r\nR - restart\r\nESC - menu" :
+                "Управление:\r\nСтрелки - движение плиток\r\nR - начать заново\r\nESC - выход в меню";
             instructionsLabel.TabStop = false;
             this.Controls.Add(instructionsLabel);
+
+            // Language button
+            languageButton = new Button();
+            languageButton.Text = isEnglish ? "RU" : "EN";
+            languageButton.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+            languageButton.Size = new Size(50, 30);
+            languageButton.Location = new Point(this.ClientSize.Width - gridPadding - 50, gridPadding);
+            languageButton.FlatStyle = FlatStyle.Flat;
+            languageButton.Click += LanguageButton_Click;
+            languageButton.TabStop = false;
+            this.Controls.Add(languageButton);
 
             UpdateTheme();
             CalculateSizes();
@@ -172,6 +186,11 @@ namespace _2048
                 instructionsLabel.Location = new Point(gridPadding, 700);
                 instructionsLabel.Size = new Size(this.ClientSize.Width - 2 * gridPadding, 80);
             }
+
+            if (languageButton != null)
+            {
+                languageButton.Location = new Point(this.ClientSize.Width - gridPadding - 50, gridPadding);
+            }
         }
 
         private void CalculateTipsPosition()
@@ -197,19 +216,33 @@ namespace _2048
             {
                 scoreLabel.ForeColor = currentSkin.TextColorValue;
                 scoreLabel.BackColor = currentSkin.BackgroundColorValue;
+                scoreLabel.Text = isEnglish ? $"Score: {game?.Score ?? 0}" : $"Счет: {game?.Score ?? 0}";
             }
 
             if (winsLabel != null)
             {
                 winsLabel.ForeColor = currentSkin.TextColorValue;
                 winsLabel.BackColor = currentSkin.BackgroundColorValue;
-                winsLabel.Text = $"Wins: {settings.TotalWins}";
+                winsLabel.Text = isEnglish ? $"Wins: {settings.TotalWins}" : $"Победы: {settings.TotalWins}";
             }
 
             if (instructionsLabel != null)
             {
                 instructionsLabel.ForeColor = currentSkin.TextColorValue;
                 instructionsLabel.BackColor = currentSkin.BackgroundColorValue;
+                instructionsLabel.Text = isEnglish ?
+                    "Controls:\r\nArrows - move tiles\r\nR - restart\r\nESC - menu" :
+                    "Управление:\r\nСтрелки - движение плиток\r\nR - начать заново\r\nESC - выход в меню";
+            }
+
+            if (languageButton != null)
+            {
+                languageButton.BackColor = currentSkin.GetTileColorValue(16);
+                languageButton.ForeColor = currentSkin.GetTextColorForTile(16);
+                languageButton.FlatAppearance.BorderColor = currentSkin.GridColorValue;
+                languageButton.FlatAppearance.MouseOverBackColor = currentSkin.GetTileColorValue(32);
+                languageButton.FlatAppearance.MouseDownBackColor = currentSkin.GetTileColorValue(64);
+                languageButton.Text = isEnglish ? "RU" : "EN";
             }
         }
 
@@ -252,9 +285,6 @@ namespace _2048
             }
         }
 
-        // УДАЛЯЕМ методы MainForm_Resize и MainForm_SizeChanged - они больше не нужны
-        // так как размер окна фиксирован и не меняется
-
         private void MainForm_Load(object? sender, EventArgs e)
         {
             CalculateSizes();
@@ -292,7 +322,7 @@ namespace _2048
             if (game == null) return;
 
             var grid = game.GetGrid();
-            var font = new Font("Arial", GetFontSize(), FontStyle.Bold);
+            var font = new Font("Segoe UI", GetFontSize(), FontStyle.Bold);
 
             DrawGridBackground(g);
 
@@ -452,9 +482,10 @@ namespace _2048
                 format.Alignment = StringAlignment.Center;
                 format.LineAlignment = StringAlignment.Center;
 
+                using (var textFont = new Font("Segoe UI", font.Size, FontStyle.Bold))
                 using (var textBrush = new SolidBrush(textColor))
                 {
-                    g.DrawString(value.ToString(), font, textBrush,
+                    g.DrawString(value.ToString(), textFont, textBrush,
                         new RectangleF(x, y, tileSize, tileSize), format);
                 }
             }
@@ -500,9 +531,11 @@ namespace _2048
                 format.LineAlignment = StringAlignment.Center;
 
                 Color textColor = currentSkin.GetTextColorForTile(value);
+
+                using (var textFont = new Font("Segoe UI", font.Size, FontStyle.Bold))
                 using (var textBrush = new SolidBrush(textColor))
                 {
-                    g.DrawString(value.ToString(), font, textBrush, tileRect, format);
+                    g.DrawString(value.ToString(), textFont, textBrush, tileRect, format);
                 }
 
                 if (currentSkin.UseParticles && value >= 64)
@@ -665,7 +698,7 @@ namespace _2048
                 float scaleFactor = Math.Min((float)width / tileSize, (float)height / tileSize);
                 float fontSize = Math.Max(8.0f, font.Size * scaleFactor);
 
-                using (var scaledFont = new Font(font.FontFamily, fontSize, font.Style))
+                using (var scaledFont = new Font("Segoe UI", fontSize, font.Style))
                 using (var textBrush = new SolidBrush(currentSkin.GetTextColorForTile(value)))
                 {
                     g.DrawString(value.ToString(), scaledFont, textBrush, tileRect, format);
@@ -702,7 +735,8 @@ namespace _2048
                 currentSkin.GridColorValue,
                 3, 15);
 
-            using (var titleFont = new Font("Arial", 18, FontStyle.Bold))
+            // Используем шрифт, который поддерживает emoji
+            using (var titleFont = new Font("Segoe UI Emoji", 18, FontStyle.Bold))
             using (var titleBrush = new SolidBrush(currentSkin.TextColorValue))
             {
                 StringFormat format = new StringFormat();
@@ -715,7 +749,11 @@ namespace _2048
                     30
                 );
 
-                string[] tabTitles = { "🎮 Основы", "🏆 Стратегия", "⌨️ Управление" };
+                // Обновляем заголовки в зависимости от языка
+                string[] tabTitlesRu = { "🎮 Основы", "🏆 Стратегия", "⌨️ Управление" };
+                string[] tabTitlesEn = { "🎮 Basics", "🏆 Strategy", "⌨️ Controls" };
+
+                string[] tabTitles = isEnglish ? tabTitlesEn : tabTitlesRu;
                 g.DrawString(tabTitles[currentTipsTab], titleFont, titleBrush, titleRect, format);
             }
 
@@ -730,7 +768,9 @@ namespace _2048
             int tabHeight = 30;
             int tabY = tipsRect.Top + 50;
 
-            string[] tabNames = { "Основы", "Стратегия", "Управление" };
+            string[] tabNamesRu = { "Основы", "Стратегия", "Управление" };
+            string[] tabNamesEn = { "Basics", "Strategy", "Controls" };
+            string[] tabNames = isEnglish ? tabNamesEn : tabNamesRu;
 
             for (int i = 0; i < 3; i++)
             {
@@ -747,7 +787,7 @@ namespace _2048
 
                 DrawRoundedRectangle(g, tabRect, tabColor, currentSkin.GridColorValue, 1, 5);
 
-                using (var tabFont = new Font("Arial", 10, i == currentTipsTab ? FontStyle.Bold : FontStyle.Regular))
+                using (var tabFont = new Font("Segoe UI", 10, i == currentTipsTab ? FontStyle.Bold : FontStyle.Regular))
                 using (var tabBrush = new SolidBrush(currentSkin.GetTextColorForTile(i == currentTipsTab ? 16 : 2)))
                 {
                     StringFormat format = new StringFormat();
@@ -768,37 +808,63 @@ namespace _2048
                 tipsRect.Height - 180
             );
 
-            string[] contents = {
-                @"🎯 **Цель игры:**
-Создайте плитку 2048!
+            // Текст на русском
+            string[] contentsRu = {
+                "🎯 Цель игры:\n" +
+                "Создайте плитку 2048!\n\n" +
+                "📋 Механика:\n" +
+                "• Двигайте плитки стрелками\n" +
+                "• Одинаковые плитки сливаются\n" +
+                "• После хода новая плитка\n" +
+                "• Игра продолжается после 2048!",
 
-📋 **Механика:**
-• Двигайте плитки стрелками
-• Одинаковые плитки сливаются
-• После хода новая плитка
-• Игра продолжается после 2048!",
+                "🏆 Ключевые стратегии:\n\n" +
+                "1. Угловая тактика:\n" +
+                "   • Выберите угол\n" +
+                "   • Держите там самую большую плитку\n" +
+                "   • Стройте последовательности\n\n" +
+                "2. Планирование:\n" +
+                "   • Думайте на 2-3 хода вперед\n" +
+                "   • Контролируйте появление плиток\n" +
+                "   • Избегайте случайных движений",
 
-                @"🏆 **Ключевые стратегии:**
-
-1. **Угловая тактика:**
-   • Выберите угол
-   • Держите там самую большую плитку
-   • Стройте последовательности
-
-2. **Планирование:**
-   • Думайте на 2-3 хода вперед
-   • Контролируйте появление плиток
-   • Избегайте случайных движений",
-
-                @"⌨️ **Управление:**
-
-**Основные клавиши:**
-• ← ↑ → ↓ - движение плиток
-• R - начать новую игру
-• ESC - выход в меню"
+                "⌨️ Управление:\n\n" +
+                "Основные клавиши:\n" +
+                "• ← ↑ → ↓ - движение плиток\n" +
+                "• R - начать новую игру\n" +
+                "• ESC - выход в меню"
             };
 
-            using (var contentFont = new Font("Arial", 11))
+            // Текст на английском
+            string[] contentsEn = {
+                "🎯 Goal:\n" +
+                "Create the 2048 tile!\n\n" +
+                "📋 Mechanics:\n" +
+                "• Move tiles with arrows\n" +
+                "• Same tiles merge\n" +
+                "• New tile after each move\n" +
+                "• Game continues after 2048!",
+
+                "🏆 Key Strategies:\n\n" +
+                "1. Corner Strategy:\n" +
+                "   • Choose a corner\n" +
+                "   • Keep largest tile there\n" +
+                "   • Build sequences\n\n" +
+                "2. Planning:\n" +
+                "   • Think 2-3 moves ahead\n" +
+                "   • Control tile spawns\n" +
+                "   • Avoid random moves",
+
+                "⌨️ Controls:\n\n" +
+                "Main Keys:\n" +
+                "• ← ↑ → ↓ - move tiles\n" +
+                "• R - restart game\n" +
+                "• ESC - exit to menu"
+            };
+
+            string[] contents = isEnglish ? contentsEn : contentsRu;
+
+            using (var contentFont = new Font("Segoe UI", 11))
             using (var contentBrush = new SolidBrush(currentSkin.TextColorValue))
             {
                 StringFormat format = new StringFormat();
@@ -824,18 +890,28 @@ namespace _2048
                     currentSkin.GridColorValue,
                     2, 8);
 
-                using (var btnFont = new Font("Arial", 11, FontStyle.Bold))
+                using (var btnFont = new Font("Segoe UI", 11, FontStyle.Bold))
                 using (var btnBrush = new SolidBrush(currentSkin.GetTextColorForTile(4)))
                 {
                     StringFormat format = new StringFormat();
                     format.Alignment = StringAlignment.Center;
                     format.LineAlignment = StringAlignment.Center;
 
-                    g.DrawString("← Назад", btnFont, btnBrush, backButton, format);
+                    string backText = isEnglish ? "← Back" : "← Назад";
+                    g.DrawString(backText, btnFont, btnBrush, backButton, format);
                 }
             }
 
-            string buttonText = (currentTipsTab < 2) ? "Далее →" : "Играть!";
+            string buttonText;
+            if (isEnglish)
+            {
+                buttonText = (currentTipsTab < 2) ? "Next →" : "Play!";
+            }
+            else
+            {
+                buttonText = (currentTipsTab < 2) ? "Далее →" : "Играть!";
+            }
+
             Rectangle nextButton = new Rectangle(
                 tipsRect.Right - 130,
                 tipsRect.Bottom - 60,
@@ -848,7 +924,7 @@ namespace _2048
                 currentSkin.GridColorValue,
                 2, 8);
 
-            using (var btnFont = new Font("Arial", 11, FontStyle.Bold))
+            using (var btnFont = new Font("Segoe UI", 11, FontStyle.Bold))
             using (var btnBrush = new SolidBrush(currentSkin.GetTextColorForTile(8)))
             {
                 StringFormat format = new StringFormat();
@@ -891,14 +967,17 @@ namespace _2048
                 }
             }
 
-            using (var textFont = new Font("Arial", 10))
+            using (var textFont = new Font("Segoe UI", 10))
             using (var textBrush = new SolidBrush(currentSkin.TextColorValue))
             {
-                g.DrawString("Больше не показывать подсказки", textFont, textBrush,
+                string checkboxText = isEnglish ?
+                    "Don't show tips again" :
+                    "Больше не показывать подсказки";
+                g.DrawString(checkboxText, textFont, textBrush,
                             checkboxRect.Right + 10, checkboxRect.Top - 2);
             }
 
-            using (var skipFont = new Font("Arial", 9))
+            using (var skipFont = new Font("Segoe UI", 9))
             using (var skipBrush = new SolidBrush(Color.FromArgb(150, currentSkin.TextColorValue)))
             {
                 Rectangle skipRect = new Rectangle(
@@ -912,7 +991,8 @@ namespace _2048
                 format.Alignment = StringAlignment.Center;
                 format.LineAlignment = StringAlignment.Center;
 
-                g.DrawString("Пропустить обучение", skipFont, skipBrush, skipRect, format);
+                string skipText = isEnglish ? "Skip tutorial" : "Пропустить обучение";
+                g.DrawString(skipText, skipFont, skipBrush, skipRect, format);
             }
         }
 
@@ -950,7 +1030,7 @@ namespace _2048
 
             DrawRoundedRectangle(g, messageRect, currentSkin.BackgroundColorValue, currentSkin.GridColorValue, 3, 15);
 
-            using (var font = new Font("Arial", GetMessageFontSize(), FontStyle.Bold))
+            using (var font = new Font("Segoe UI", GetMessageFontSize(), FontStyle.Bold))
             using (var brush = new SolidBrush(currentSkin.TextColorValue))
             {
                 StringFormat format = new StringFormat();
@@ -964,9 +1044,13 @@ namespace _2048
                     messageRect.Height - 20
                 );
 
-                string gameOverText = $"Game Over!\n\nScore: {game.Score}\n\nPress R to Restart";
+                string scoreText = isEnglish ? "Score:" : "Счет:";
+                string restartText = isEnglish ? "Press R to Restart" : "Нажмите R для перезапуска";
+                string gameOverText = isEnglish ? "Game Over!" : "Игра окончена!";
 
-                g.DrawString(gameOverText, font, brush, textRect, format);
+                string message = $"{gameOverText}\n\n{scoreText} {game.Score}\n\n{restartText}";
+
+                g.DrawString(message, font, brush, textRect, format);
             }
         }
 
@@ -999,7 +1083,7 @@ namespace _2048
 
             DrawRoundedRectangle(g, messageRect, Color.Gold, Color.DarkGoldenrod, 3, 15);
 
-            using (var font = new Font("Arial", GetMessageFontSize(), FontStyle.Bold))
+            using (var font = new Font("Segoe UI", GetMessageFontSize(), FontStyle.Bold))
             using (var brush = new SolidBrush(Color.DarkRed))
             {
                 StringFormat format = new StringFormat();
@@ -1013,9 +1097,13 @@ namespace _2048
                     messageRect.Height - 20
                 );
 
-                string winText = $"You Win!\n\nScore: {game.Score}\n\nPress R to Restart";
+                string scoreText = isEnglish ? "Score:" : "Счет:";
+                string restartText = isEnglish ? "Press R to Restart" : "Нажмите R для перезапуска";
+                string winText = isEnglish ? "You Win!" : "Вы победили!";
 
-                g.DrawString(winText, font, brush, textRect, format);
+                string message = $"{winText}\n\n{scoreText} {game.Score}\n\n{restartText}";
+
+                g.DrawString(message, font, brush, textRect, format);
             }
         }
 
@@ -1023,7 +1111,7 @@ namespace _2048
         {
             if (scoreLabel != null && game != null)
             {
-                scoreLabel.Text = $"Score: {game.Score}";
+                scoreLabel.Text = isEnglish ? $"Score: {game.Score}" : $"Счет: {game.Score}";
             }
         }
 
@@ -1115,6 +1203,20 @@ namespace _2048
                 }
                 this.Invalidate();
             }
+        }
+
+        // Обработчик кнопки перевода
+        private void LanguageButton_Click(object? sender, EventArgs e)
+        {
+            isEnglish = !isEnglish;
+            UpdateLanguage();
+            this.Invalidate();
+        }
+
+        private void UpdateLanguage()
+        {
+            this.Text = isEnglish ? "2048 Game" : "Игра 2048";
+            UpdateTheme();
         }
 
         // Новый метод для возврата в главное меню
@@ -1293,6 +1395,5 @@ namespace _2048
 
             base.WndProc(ref m);
         }
-
     }
 }
