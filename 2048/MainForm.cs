@@ -26,11 +26,7 @@ namespace _2048
         private bool showGameOver = false;
         private bool showWin = false;
 
-        // Подсказки
-        private bool showTips = true;
-        private bool tipsVisible = false;
-        private Rectangle tipsRect;
-        private int currentTipsTab = 0;
+        // Вертикальный отступ для игрового поля
         private const int VerticalOffset = 80;
 
         // Ссылка на главную форму для возврата
