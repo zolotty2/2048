@@ -15,7 +15,6 @@ namespace _2048
         private Label scoreLabel;
         private Label winsLabel;
         private Label instructionsLabel;
-        private Button languageButton;
         private System.Windows.Forms.Timer animationTimer;
         private float animationSpeed = 0.10f;
 
@@ -36,7 +35,7 @@ namespace _2048
         // Ссылка на главную форму для возврата
         private Form? startScreenForm;
 
-        // Система перевода
+        // Система перевода (только флаг, без кнопки)
         private bool isEnglish = false;
         private const int VerticalOffset = 50;
 
@@ -63,10 +62,8 @@ namespace _2048
             InitializeGameComponents();
         }
 
-        // Метод для показа подсказок (оставляем, но убираем вызов из меню)
         public void ShowTipsFromMenu()
         {
-            // Этот метод больше не вызывается из меню, но оставляем на случай если понадобится
             tipsVisible = true;
             showTips = true;
             currentTipsTab = 0;
@@ -138,17 +135,6 @@ namespace _2048
             instructionsLabel.TabStop = false;
             this.Controls.Add(instructionsLabel);
 
-            // Language button
-            languageButton = new Button();
-            languageButton.Text = isEnglish ? "RU" : "EN";
-            languageButton.Font = new Font("Segoe UI", 10, FontStyle.Bold);
-            languageButton.Size = new Size(50, 30);
-            languageButton.Location = new Point(this.ClientSize.Width - gridPadding - 50, gridPadding);
-            languageButton.FlatStyle = FlatStyle.Flat;
-            languageButton.Click += LanguageButton_Click;
-            languageButton.TabStop = false;
-            this.Controls.Add(languageButton);
-
             UpdateTheme();
             CalculateSizes();
         }
@@ -185,11 +171,6 @@ namespace _2048
             {
                 instructionsLabel.Location = new Point(gridPadding, 700);
                 instructionsLabel.Size = new Size(this.ClientSize.Width - 2 * gridPadding, 80);
-            }
-
-            if (languageButton != null)
-            {
-                languageButton.Location = new Point(this.ClientSize.Width - gridPadding - 50, gridPadding);
             }
         }
 
@@ -233,16 +214,6 @@ namespace _2048
                 instructionsLabel.Text = isEnglish ?
                     "Controls:\r\nArrows - move tiles\r\nR - restart\r\nESC - menu" :
                     "Управление:\r\nСтрелки - движение плиток\r\nR - начать заново\r\nESC - выход в меню";
-            }
-
-            if (languageButton != null)
-            {
-                languageButton.BackColor = currentSkin.GetTileColorValue(16);
-                languageButton.ForeColor = currentSkin.GetTextColorForTile(16);
-                languageButton.FlatAppearance.BorderColor = currentSkin.GridColorValue;
-                languageButton.FlatAppearance.MouseOverBackColor = currentSkin.GetTileColorValue(32);
-                languageButton.FlatAppearance.MouseDownBackColor = currentSkin.GetTileColorValue(64);
-                languageButton.Text = isEnglish ? "RU" : "EN";
             }
         }
 
@@ -1205,20 +1176,6 @@ namespace _2048
             }
         }
 
-        // Обработчик кнопки перевода
-        private void LanguageButton_Click(object? sender, EventArgs e)
-        {
-            isEnglish = !isEnglish;
-            UpdateLanguage();
-            this.Invalidate();
-        }
-
-        private void UpdateLanguage()
-        {
-            this.Text = isEnglish ? "2048 Game" : "Игра 2048";
-            UpdateTheme();
-        }
-
         // Новый метод для возврата в главное меню
         private void ReturnToMainMenu()
         {
@@ -1377,23 +1334,7 @@ namespace _2048
             base.OnPreviewKeyDown(e);
         }
 
-        // Добавляем обработчик WndProc для полной блокировки ресайза
-        protected override void WndProc(ref Message m)
-        {
-            const int WM_SYSCOMMAND = 0x0112;
-            const int SC_MAXIMIZE = 0xF030;
-            const int SC_SIZE = 0xF000;
 
-            if (m.Msg == WM_SYSCOMMAND)
-            {
-                int command = m.WParam.ToInt32() & 0xFFF0;
-                if (command == SC_MAXIMIZE || command == SC_SIZE)
-                {
-                    return; // Блокируем максимизацию и изменение размера
-                }
-            }
-
-            base.WndProc(ref m);
-        }
+      
     }
 }

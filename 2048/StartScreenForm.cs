@@ -11,7 +11,6 @@ namespace _2048
         private Button exitButton;
         private Button languageButton;
         private Label titleLabel;
-        private Label versionLabel;
 
         private SkinSettings settings;
 
@@ -58,22 +57,23 @@ namespace _2048
             titleLabel.TabStop = false;
             this.Controls.Add(titleLabel);
 
-            // Version label
-            versionLabel = new Label();
-            versionLabel.Text = "v1.0";
-            versionLabel.Font = new Font("Segoe UI", 10, FontStyle.Italic);
-            versionLabel.AutoSize = true;
-            versionLabel.Location = new Point(180, 130);
-            versionLabel.TextAlign = ContentAlignment.MiddleCenter;
-            versionLabel.TabStop = false;
-            this.Controls.Add(versionLabel);
+            // Language button - перемещена выше
+            languageButton = new Button();
+            languageButton.Text = "EN";
+            languageButton.Font = new Font("Segoe UI", 12, FontStyle.Bold);
+            languageButton.Size = new Size(60, 35);
+            languageButton.Location = new Point(320, 10); // Выше, была на 20
+            languageButton.FlatStyle = FlatStyle.Flat;
+            languageButton.Click += LanguageButton_Click;
+            languageButton.BackColor = Color.Transparent;
+            this.Controls.Add(languageButton);
 
             // Start button
             startButton = new Button();
             startButton.Text = "Начать игру";
             startButton.Font = new Font("Segoe UI", 14, FontStyle.Bold);
             startButton.Size = new Size(250, 50);
-            startButton.Location = new Point(75, 180);
+            startButton.Location = new Point(75, 160); // Сдвинуто выше из-за удаления версии
             startButton.FlatStyle = FlatStyle.Flat;
             startButton.Click += StartButton_Click;
             this.Controls.Add(startButton);
@@ -83,28 +83,17 @@ namespace _2048
             skinsButton.Text = "Скины";
             skinsButton.Font = new Font("Segoe UI", 14, FontStyle.Bold);
             skinsButton.Size = new Size(250, 50);
-            skinsButton.Location = new Point(75, 240);
+            skinsButton.Location = new Point(75, 220);
             skinsButton.FlatStyle = FlatStyle.Flat;
             skinsButton.Click += SkinsButton_Click;
             this.Controls.Add(skinsButton);
-
-            // Language button
-            languageButton = new Button();
-            languageButton.Text = "EN";
-            languageButton.Font = new Font("Segoe UI", 12, FontStyle.Bold);
-            languageButton.Size = new Size(60, 35);
-            languageButton.Location = new Point(320, 20);
-            languageButton.FlatStyle = FlatStyle.Flat;
-            languageButton.Click += LanguageButton_Click;
-            languageButton.BackColor = Color.Transparent;
-            this.Controls.Add(languageButton);
 
             // Exit button
             exitButton = new Button();
             exitButton.Text = "Выход";
             exitButton.Font = new Font("Segoe UI", 14, FontStyle.Bold);
             exitButton.Size = new Size(250, 50);
-            exitButton.Location = new Point(75, 300);
+            exitButton.Location = new Point(75, 280);
             exitButton.FlatStyle = FlatStyle.Flat;
             exitButton.Click += ExitButton_Click;
             this.Controls.Add(exitButton);
@@ -117,7 +106,6 @@ namespace _2048
             // Apply colors from current skin
             this.BackColor = currentSkin.BackgroundColorValue;
             titleLabel.ForeColor = currentSkin.TextColorValue;
-            versionLabel.ForeColor = currentSkin.TextColorValue;
 
             // Update button colors
             UpdateButtonColors(startButton, currentSkin);
